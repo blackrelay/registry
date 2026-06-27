@@ -148,7 +148,7 @@ jobs:
         uses: vmactions/netbsd-vm@99816dccf75edf233ed6cd00a159e3a5b85ea373 # v1.4.0
         with:
           usesh: true
-          sync: rsync
+          sync: scp
           copyback: false
           release: "10.1"
           prepare: |
@@ -157,6 +157,7 @@ jobs:
             set -eu
             export GOFLAGS="-buildvcs=false"
             export GOTOOLCHAIN="auto"
+            export PATH="/usr/pkg/bin:/usr/pkg/sbin:${PATH}"
             go_cmd="$(command -v go || command -v go125 || true)"
             if [ -z "${go_cmd}" ]; then
               echo "go not found" >&2
