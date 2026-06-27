@@ -86,6 +86,13 @@ func DeriveEntitiesFromEvent(event db.EventRecord) DerivedEventGraph {
 		builder.characterCreated(payload)
 	case "killmail.created":
 		builder.killmailCreated(payload)
+	case "inventory.item.minted", "inventory.item.burned", "inventory.item.destroyed",
+		"inventory.item.deposited", "inventory.item.withdrawn",
+		"inventory.item.deposited.v2", "inventory.item.withdrawn.v2",
+		"inventory.item.deposited.event.v2", "inventory.item.withdrawn.event.v2":
+		builder.inventoryItemAction(payload)
+	case "rift.spawned", "rift.location.broadcast":
+		builder.riftEvent(payload)
 	case "assembly.created", "gate.created", "network_node.created", "storage_unit.created", "turret.created":
 		builder.assemblyLike(payload)
 	case "gate.jump":
@@ -453,6 +460,110 @@ func (b *eventGraphBuilder) gateJump(payload map[string]any) {
 	b.relation(routeID, "observed_between", destinationGateID)
 }
 
+func (b *eventGraphBuilder) inventoryItemAction(payload map[string]any) {
+	typeID := stringFrom(numberOrString(payload["type_id"]))
+	if typeID == "" {
+		return
+	}
+	tenant := string(model.EnvironmentUnknown)
+	if key, ok := firstTenantItem(payload, []string{"assembly_key", "storage_unit_key", "key"}); ok {
+		tenant = tenantOrEnvironment(key.Tenant, b.event.Environment)
+	} else if character, ok := tenantItemID(payload["character_key"]); ok {
+		tenant = tenantOrEnvironment(character.Tenant, b.event.Environment)
+	} else if b.event.Environment != "" {
+		tenant = string(b.event.Environment)
+	}
+
+	itemID := inventoryItemEntityID(tenant, typeID)
+	facts := b.facts()
+	facts.add("type_id", typeID)
+	facts.add("tenant", tenant)
+	facts.add("quantity", numberOrString(payload["quantity"]))
+	facts.add("item_id", numberOrString(payload["item_id"]))
+	facts.add("inventory_key", stringFrom(payload["inventory_key"]))
+	facts.add("assembly_id", stringFrom(payload["assembly_id"]))
+	facts.add("character_id", stringFrom(payload["character_id"]))
+	facts.add("inventory_action", inventoryActionName(b.event.Kind))
+	b.addEntity(model.Entity{
+		ID:          itemID,
+		Slug:        slugify(fmt.Sprintf("item-type-%s-%s", typeID, tenant)),
+		Type:        model.EntityTypeItem,
+		Name:        "Item Type " + typeID,
+		DisplayName: "Item Type " + typeID,
+		Summary:     "Public on-chain inventory item type observed from Sui event data.",
+		Environment: b.event.Environment,
+		UpdatedAt:   time.Now().UTC(),
+	}, facts.values())
+
+	if storageKey, ok := firstTenantItem(payload, []string{"assembly_key", "storage_unit_key", "key"}); ok {
+		storageID := b.objectLike(model.EntityTypeStorage, "Storage", storageKey, payload, [][2]any{
+			{"inventory_event_observed", true},
+		})
+		switch inventoryActionName(b.event.Kind) {
+		case "deposited", "minted":
+			b.relation(itemID, "observed_in", storageID)
+			b.relation(itemID, "deposited_into", storageID)
+		case "withdrawn", "burned", "destroyed":
+			b.relation(itemID, "observed_in", storageID)
+			b.relation(itemID, "withdrawn_from", storageID)
+		default:
+			b.relation(itemID, "observed_in", storageID)
+		}
+	}
+	if characterKey, ok := tenantItemID(payload["character_key"]); ok {
+		characterID := b.character(characterKey, [][2]any{
+			{"inventory_event_observed", true},
+			{"character_id", stringFrom(payload["character_id"])},
+		})
+		switch inventoryActionName(b.event.Kind) {
+		case "deposited", "minted":
+			b.relation(characterID, "deposited", itemID)
+		case "withdrawn", "burned", "destroyed":
+			b.relation(characterID, "withdrew", itemID)
+		default:
+			b.relation(characterID, "handled", itemID)
+		}
+	}
+}
+
+func (b *eventGraphBuilder) riftEvent(payload map[string]any) {
+	key, ok := firstTenantItem(payload, []string{"rift_key", "key"})
+	if !ok {
+		return
+	}
+	riftID := entityID(model.EntityTypeSite, tenantOrEnvironment(key.Tenant, b.event.Environment), key.ItemID)
+	facts := b.facts()
+	facts.add("item_id", key.ItemID)
+	facts.add("tenant", tenantOrEnvironment(key.Tenant, b.event.Environment))
+	facts.add("rift_id", stringFrom(payload["rift_id"]))
+	facts.add("location_hash", locationHashValue(payload["location_hash"]))
+	facts.add("solar_system_id", numberOrString(payload["solarsystem"]))
+	facts.add("x", stringFrom(payload["x"]))
+	facts.add("y", stringFrom(payload["y"]))
+	facts.add("z", stringFrom(payload["z"]))
+	b.addEntity(model.Entity{
+		ID:          riftID,
+		Slug:        entitySlug(model.EntityTypeSite, key),
+		Type:        model.EntityTypeSite,
+		Name:        "Rift " + key.ItemID,
+		DisplayName: "Rift " + key.ItemID,
+		Summary:     "Public on-chain rift observed from Sui event data.",
+		Environment: b.event.Environment,
+		UpdatedAt:   time.Now().UTC(),
+	}, facts.values())
+
+	scope := tenantOrEnvironment(key.Tenant, b.event.Environment)
+	if locationHash := locationHashValue(payload["location_hash"]); locationHash != "" {
+		resourceID := resourceObjectID(scope, "location-hash", locationHash)
+		b.resourceObject(resourceID, "location-hash", locationHash, scope, "Public on-chain rift location hash observed from Sui event data.")
+		b.relation(riftID, "has_location_hash", resourceID)
+	}
+	if solarSystemID := stringFrom(numberOrString(payload["solarsystem"])); solarSystemID != "" {
+		systemID := b.system(tenantItem{Tenant: scope, ItemID: solarSystemID})
+		b.relation(riftID, "located_in", systemID)
+	}
+}
+
 func (b *eventGraphBuilder) genericState(payload map[string]any) {
 	entityType, label, keyNames := assemblyLikeShape("", b.event.Module)
 	if entityType == model.EntityTypeUnknown {
@@ -527,6 +638,24 @@ func (b *eventGraphBuilder) system(key tenantItem) string {
 		UpdatedAt:   time.Now().UTC(),
 	}, facts.values())
 	return entityID
+}
+
+func (b *eventGraphBuilder) resourceObject(entityID, resourceKind, value, scope, summary string) {
+	name := resourceKindLabel(resourceKind) + " " + value
+	facts := b.facts()
+	facts.add("resource_kind", resourceKind)
+	facts.add("value", value)
+	facts.add("tenant", scope)
+	b.addEntity(model.Entity{
+		ID:          entityID,
+		Slug:        slugify(strings.Join(compactStrings("resource-object", resourceKind, value, scope), "-")),
+		Type:        model.EntityTypeResourceObject,
+		Name:        name,
+		DisplayName: name,
+		Summary:     summary,
+		Environment: b.event.Environment,
+		UpdatedAt:   time.Now().UTC(),
+	}, facts.values())
 }
 
 func (b *eventGraphBuilder) objectLike(entityType model.EntityType, label string, key tenantItem, payload map[string]any, extra [][2]any) string {
@@ -729,6 +858,27 @@ func entityID(entityType model.EntityType, tenant, itemID string) string {
 
 func entitySlug(entityType model.EntityType, key tenantItem) string {
 	return slugify(strings.Join(compactStrings(string(entityType), key.ItemID, key.Tenant), "-"))
+}
+
+func inventoryItemEntityID(tenant, typeID string) string {
+	return fmt.Sprintf("%s:%s:type:%s", model.EntityTypeItem, tenant, typeID)
+}
+
+func inventoryActionName(eventKind string) string {
+	switch {
+	case strings.Contains(eventKind, ".deposited"):
+		return "deposited"
+	case strings.Contains(eventKind, ".withdrawn"):
+		return "withdrawn"
+	case strings.Contains(eventKind, ".minted"):
+		return "minted"
+	case strings.Contains(eventKind, ".burned"):
+		return "burned"
+	case strings.Contains(eventKind, ".destroyed"):
+		return "destroyed"
+	default:
+		return ""
+	}
 }
 
 func tenantOrEnvironment(tenant string, environment model.Environment) string {

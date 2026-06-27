@@ -70,14 +70,14 @@ Run bounded proofs first:
 ```sh
 go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 5 -concurrency 16
 go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 5 -concurrency 16
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 ```
 
 Use `-max-pages 0` only for a deliberate full append from saved cursors. If the public Sui GraphQL endpoint reports broad object-by-type scans as outside its consistent range, the Registry records that as a provider-limited source gap. Keep the normal repair path event-first and source-backed:
 ```sh
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```

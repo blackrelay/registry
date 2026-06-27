@@ -107,7 +107,7 @@ Useful smoke commands:
 go run ./cmd/br-indexer -mode audit-stillness -manifest testdata/fixtures/sui-packages.stillness.json
 go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 1
 go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 1
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000 -max-batches 1
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000 -max-batches 1
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 1000 -max-batches 1
 go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-killmails -exclude-fixtures -sample-limit 20
@@ -143,7 +143,7 @@ Archive examples:
 ```sh
 go run ./cmd/br-indexer -mode plan -manifest testdata/fixtures/sui-packages.stillness.json -cycles all
 go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -cycles 5,6 -only-incomplete -max-pages 0 -concurrency 64
-go run ./cmd/br-indexer -mode derive-events -cycles all -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -cycles all -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 ```
 
 Audit Sui object targets that are currently marked as provider-range blocked when you need to show the exact provider-limited object types:

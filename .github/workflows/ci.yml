@@ -243,6 +243,20 @@ jobs:
     name: CI / Container Smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: blackrelay
+          POSTGRES_PASSWORD: blackrelay
+          POSTGRES_DB: blackrelay_registry
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U blackrelay -d blackrelay_registry"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -258,6 +272,9 @@ jobs:
           cache: true
 
       - name: Run Smoke Path
+        env:
+          BR_REGISTRY_CONTAINER_RUNTIME: external
+          DATABASE_URL: postgres://blackrelay:blackrelay@127.0.0.1:5432/blackrelay_registry?sslmode=disable
         run: |
           set -euo pipefail
           sh ./scripts/smoke.sh

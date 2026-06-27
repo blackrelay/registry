@@ -136,7 +136,7 @@ foreach ($package in $packages) {
   Invoke-Go ($common + @("-mode", "objects", "-allow-object-target-errors"))
 }
 
-Invoke-Go @("run", "./cmd/br-indexer", "-mode", "derive-events", "-database-url", $DatabaseUrl, "-cycles", "current", "-module", "killmail,character,gate,assembly,storage_unit,turret", "-derive-batch-size", "5000")
+Invoke-Go @("run", "./cmd/br-indexer", "-mode", "derive-events", "-database-url", $DatabaseUrl, "-cycles", "current", "-module", "killmail,character,gate,assembly,storage_unit,turret,rift", "-derive-batch-size", "5000")
 Invoke-Go @("run", "./cmd/br-indexer", "-mode", "derive-objects", "-database-url", $DatabaseUrl, "-cycles", "current", "-derive-batch-size", "5000")
 Invoke-Go @("run", "./cmd/br-indexer", "-mode", "resolve-evidence", "-database-url", $DatabaseUrl)
 $coverageAudit = Invoke-GoJson @("run", "./cmd/br-indexer", "-mode", "audit-stillness", "-database-url", $DatabaseUrl, "-manifest", $Manifest, "-package", $WorldPackage, "-cycles", "current")

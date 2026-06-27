@@ -74,7 +74,7 @@ Infrastructure objects can expose `owner_cap_id` and `location_hash` without exp
 
 Current Sui killmail objects expose `killer_id`, `victim_id`, `reported_by_character_id` and `solar_system_id` as tenant/item keys. Broad NPC killer labels require a public mapping source that links those chain values to static-client enemy type ids.
 
-`br-indexer -mode derive-events` replays stored Sui event rows into conservative entities, relations and raw killmail records. Use `-module killmail,character,gate,assembly,storage_unit,turret` for the normal semantic repair path. Module-scoped derivation saves a separate cursor for each module and batches page writes into PostgreSQL so append runs avoid replaying high-volume streams such as `network_node`.
+`br-indexer -mode derive-events` replays stored Sui event rows into conservative entities, relations and raw killmail records. Use `-module killmail,character,gate,assembly,storage_unit,turret,rift` for the normal semantic repair path. Module-scoped derivation saves a separate cursor for each module and batches page writes into PostgreSQL so append runs avoid replaying high-volume streams such as `network_node`.
 
 `br-indexer -mode audit-tribe-identity-evidence` scans stored Sui event and object payloads for explicit tribe profile fields. It separates membership-only `tribe_id` or `corpId` evidence from rows that actually contain tribe names, tickers, descriptions or URLs. Candidate profile rows still require review before promotion through `br-import tribe-identities`.
 

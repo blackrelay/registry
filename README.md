@@ -172,7 +172,7 @@ go run ./cmd/br-indexer -mode all -manifest testdata/fixtures/sui-packages.still
 
 Derive semantic records from stored chain rows:
 ```sh
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 ```

@@ -1,6 +1,7 @@
 package sui
 
 import (
+	"encoding/hex"
 	"fmt"
 	"regexp"
 	"strings"
@@ -44,6 +45,8 @@ func DeriveGraphFromObject(object db.SuiObjectRecord) DerivedObjectGraph {
 	case model.EntityTypeGate:
 		builder.infrastructureEvidenceRelations(entity.Entity.ID, jsonValue)
 		builder.gateRelations(entity.Entity.ID, jsonValue)
+	case model.EntityTypeSite:
+		builder.riftRelations(entity.Entity.ID, jsonValue)
 	case model.EntityTypeKillmail:
 		builder.killmailRelations(entity.Entity.ID, jsonValue)
 	}
@@ -111,6 +114,9 @@ func DeriveEntityFromObject(object db.SuiObjectRecord) (DerivedObjectEntity, boo
 		facts.add("location_hash", locationHash(jsonValue["location"]))
 		facts.add("energy_source_id", stringFrom(jsonValue["energy_source_id"]))
 		facts.add("linked_gate_id", stringFrom(jsonValue["linked_gate_id"]))
+	case model.EntityTypeSite:
+		facts.add("rift_id", object.ObjectID)
+		facts.add("location_hash", locationHash(jsonValue["location"]))
 	case model.EntityTypeKillmail:
 		facts.add("killer_id", tenantItemIDValue(jsonValue["killer_id"]))
 		facts.add("victim_id", tenantItemIDValue(jsonValue["victim_id"]))
@@ -199,6 +205,16 @@ func (b *objectGraphBuilder) infrastructureEvidenceRelations(entityID string, js
 	if locationHash := locationHash(jsonValue["location"]); locationHash != "" {
 		resourceID := resourceObjectID(scope, "location-hash", locationHash)
 		b.resourceObject(resourceID, "location-hash", locationHash, scope, "Public on-chain location hash observed from Sui object data.")
+		b.relation(entityID, "has_location_hash", resourceID)
+	}
+}
+
+func (b *objectGraphBuilder) riftRelations(entityID string, jsonValue map[string]any) {
+	tenant, _ := objectIdentity(jsonValue)
+	scope := objectScope(tenant, b.object.Environment)
+	if locationHash := locationHash(jsonValue["location"]); locationHash != "" {
+		resourceID := resourceObjectID(scope, "location-hash", locationHash)
+		b.resourceObject(resourceID, "location-hash", locationHash, scope, "Public on-chain rift location hash observed from Sui object data.")
 		b.relation(entityID, "has_location_hash", resourceID)
 	}
 }
@@ -394,6 +410,8 @@ func entityTypeForObject(moduleName, typeName string) model.EntityType {
 		return model.EntityTypeTurret
 	case moduleName == "killmail" && typeName == "Killmail":
 		return model.EntityTypeKillmail
+	case moduleName == "rift" && typeName == "Rift":
+		return model.EntityTypeSite
 	default:
 		return model.EntityTypeUnknown
 	}
@@ -480,6 +498,7 @@ func objectName(entityType model.EntityType, displayName, itemID, objectID strin
 		model.EntityTypeCharacter: "Character",
 		model.EntityTypeGate:      "Gate",
 		model.EntityTypeKillmail:  "Killmail",
+		model.EntityTypeSite:      "Rift",
 		model.EntityTypeStorage:   "Storage",
 		model.EntityTypeTurret:    "Turret",
 	}[entityType]
@@ -567,7 +586,26 @@ func locationHash(value any) string {
 	if !ok {
 		return ""
 	}
-	return stringFrom(record["location_hash"])
+	return locationHashValue(record["location_hash"])
+}
+
+func locationHashValue(value any) string {
+	if hash := stringFrom(value); hash != "" {
+		return hash
+	}
+	items, ok := value.([]any)
+	if !ok || len(items) == 0 {
+		return ""
+	}
+	bytes := make([]byte, 0, len(items))
+	for _, item := range items {
+		number, ok := numberOrString(item).(int64)
+		if !ok || number < 0 || number > 255 {
+			return ""
+		}
+		bytes = append(bytes, byte(number))
+	}
+	return "0x" + hex.EncodeToString(bytes)
 }
 
 func variantValue(value any) string {

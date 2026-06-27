@@ -207,7 +207,7 @@ for package_id in $packages; do
   run go run ./cmd/br-indexer -mode objects -database-url "$DATABASE_URL" -manifest "$MANIFEST" -package "$package_id" -cycles current -max-pages "$MAX_PAGES" -concurrency "$CONCURRENCY" -retries 12 -allow-object-target-errors $incomplete_args
 done
 
-run go run ./cmd/br-indexer -mode derive-events -database-url "$DATABASE_URL" -cycles current -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+run go run ./cmd/br-indexer -mode derive-events -database-url "$DATABASE_URL" -cycles current -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 run go run ./cmd/br-indexer -mode derive-objects -database-url "$DATABASE_URL" -cycles current -derive-batch-size 5000
 run go run ./cmd/br-indexer -mode resolve-evidence -database-url "$DATABASE_URL"
 coverage_path="$SUMMARY_PATH.coverage.json"

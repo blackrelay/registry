@@ -135,6 +135,104 @@ func TestDeriveEntitiesFromAssemblyEventPreservesMetadataDescriptionAndURL(t *te
 	}
 }
 
+func TestDeriveEntitiesFromInventoryV2EventCreatesItemStorageAndCharacterRelations(t *testing.T) {
+	event := db.EventRecord{
+		ID:          "event:inventory-v2:0",
+		Kind:        "inventory.item.deposited.v2",
+		Environment: model.EnvironmentStillness,
+		OccurredAt:  time.Date(2026, 6, 25, 10, 0, 0, 0, time.UTC),
+		Module:      "storage_unit",
+		SourceID:    "source:sui:sui-testnet:graphql",
+		Payload: map[string]any{
+			"json": map[string]any{
+				"item_id":       "0",
+				"type_id":       "81972",
+				"quantity":      float64(1),
+				"assembly_id":   "0xstorage",
+				"inventory_key": "0xinventory",
+				"assembly_key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "1000000259415",
+				},
+				"character_id": "0xcharacter",
+				"character_key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "2112092707",
+				},
+			},
+		},
+	}
+
+	derived := DeriveEntitiesFromEvent(event)
+	if !hasDerivedEntity(derived.Entities, "item:stillness:type:81972", model.EntityTypeItem) {
+		t.Fatalf("missing item type entity %#v", derived.Entities)
+	}
+	if !hasDerivedEntity(derived.Entities, "storage:stillness:1000000259415", model.EntityTypeStorage) {
+		t.Fatalf("missing storage entity %#v", derived.Entities)
+	}
+	if !hasDerivedEntity(derived.Entities, "character:stillness:2112092707", model.EntityTypeCharacter) {
+		t.Fatalf("missing character entity %#v", derived.Entities)
+	}
+	if !hasRelation(derived.Relations, "item:stillness:type:81972", "deposited_into", "storage:stillness:1000000259415") {
+		t.Fatalf("missing item deposit relation %#v", derived.Relations)
+	}
+	if !hasRelation(derived.Relations, "character:stillness:2112092707", "deposited", "item:stillness:type:81972") {
+		t.Fatalf("missing character deposit relation %#v", derived.Relations)
+	}
+	var item *DerivedEventEntity
+	for i := range derived.Entities {
+		if derived.Entities[i].Entity.ID == "item:stillness:type:81972" {
+			item = &derived.Entities[i]
+			break
+		}
+	}
+	if item == nil || !hasEventFact(item.Facts, "inventory_action", "deposited") || !hasEventFact(item.Facts, "type_id", "81972") {
+		t.Fatalf("missing item inventory facts %#v", item)
+	}
+}
+
+func TestDeriveEntitiesFromRiftBroadcastCreatesSiteSystemAndLocationEvidence(t *testing.T) {
+	event := db.EventRecord{
+		ID:          "event:rift:0",
+		Kind:        "rift.location.broadcast",
+		Environment: model.EnvironmentStillness,
+		OccurredAt:  time.Date(2026, 6, 25, 10, 0, 0, 0, time.UTC),
+		Module:      "rift",
+		SourceID:    "source:sui:sui-testnet:graphql",
+		Payload: map[string]any{
+			"json": map[string]any{
+				"rift_id":       "0xrift",
+				"location_hash": "0xabc123",
+				"solarsystem":   float64(30001001),
+				"x":             "12.5",
+				"y":             "-3.25",
+				"z":             "8",
+				"rift_key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "9001",
+				},
+			},
+		},
+	}
+
+	derived := DeriveEntitiesFromEvent(event)
+	if !hasDerivedEntity(derived.Entities, "site:stillness:9001", model.EntityTypeSite) {
+		t.Fatalf("missing rift site entity %#v", derived.Entities)
+	}
+	if !hasDerivedEntity(derived.Entities, "system:stillness:30001001", model.EntityTypeSystem) {
+		t.Fatalf("missing broadcast system entity %#v", derived.Entities)
+	}
+	if !hasDerivedEntity(derived.Entities, "resource_object:stillness:location-hash:0xabc123", model.EntityTypeResourceObject) {
+		t.Fatalf("missing rift location hash evidence entity %#v", derived.Entities)
+	}
+	if !hasRelation(derived.Relations, "site:stillness:9001", "located_in", "system:stillness:30001001") {
+		t.Fatalf("missing rift system relation %#v", derived.Relations)
+	}
+	if !hasRelation(derived.Relations, "site:stillness:9001", "has_location_hash", "resource_object:stillness:location-hash:0xabc123") {
+		t.Fatalf("missing rift location hash relation %#v", derived.Relations)
+	}
+}
+
 func TestDeriveEntitiesFromEventAssignsTimestampCycle(t *testing.T) {
 	event := db.EventRecord{
 		ID:          "event:cycle6:0",

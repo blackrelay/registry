@@ -161,7 +161,12 @@ func parseMoveType(value string) (moveTypeParts, error) {
 }
 
 func eventKindForMoveType(parts moveTypeParts) string {
-	typeName := strings.TrimSuffix(parts.TypeName, "Event")
+	typeName := parts.TypeName
+	if strings.HasSuffix(typeName, "EventV2") {
+		typeName = strings.TrimSuffix(typeName, "EventV2") + "V2"
+	} else {
+		typeName = strings.TrimSuffix(typeName, "Event")
+	}
 	moduleName := toSnake(parts.Module)
 	eventName := toSnake(typeName)
 	prefix := moduleName + "_"
