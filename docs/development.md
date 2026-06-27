@@ -7,7 +7,7 @@ go vet ./...
 go build ./cmd/...
 go run ./cmd/br-indexer -mode plan -manifest testdata/fixtures/sui-packages.stillness.json
 go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 1
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 1000
 go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-tribe-identity-evidence -environment stillness -sample-limit 20
@@ -132,7 +132,7 @@ go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 1000
 
 Replay stored Sui events into conservative Registry entities, killmail records and relations:
 ```sh
-go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000
+go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
 ```
 
 The module-scoped event derivation command is the normal repair/append path for semantic API data. It stores separate cursors for each requested module and avoids replaying high-volume streams such as `network_node` unless a deliberate full replay is required. Omit `-module` only for that full maintenance replay.
@@ -154,7 +154,7 @@ Audit saved manifest object targets that are currently marked as provider-range 
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-The primary Cycle 6 repair path is event backfill and module-scoped `derive-events` for chain-derived state. World API tribe/system snapshots provide public profile fields where those endpoints exist. Static-client imports provide systems, constellations, regions, enemies, type rows and reviewed recipes.
+The primary Cycle 6 repair path is event backfill and module-scoped `derive-events` for chain-derived state. Storage-unit inventory rows include item mint, burn, destroy, deposit and withdraw actions, including the Cycle 6 v2 deposit/withdraw event shapes. These derive conservative item type placeholders, storage evidence and character action relations until static-client type imports provide names and categories. World API tribe/system snapshots provide public profile fields where those endpoints exist. Static-client imports provide systems, constellations, regions, enemies, type rows and reviewed recipes.
 
 Generate fixture-aware local quality reports after derivation:
 ```sh

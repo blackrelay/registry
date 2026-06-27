@@ -59,7 +59,7 @@ func sourceGapRows(environment model.Environment, ownershipEvidenceOnly, locatio
 			Summary:           "Broad Sui object-by-type cursor targets are outside the public GraphQL provider's consistent-range window.",
 			RecommendedAction: "Keep the raw cursor error as evidence. Treat events as the primary chain source, repair semantic state from event derivation and use World API or static-client imports for names and static data.",
 			SuggestedCommands: []string{
-				"go run ./cmd/br-indexer -mode derive-events -environment " + env + " -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000",
+				"go run ./cmd/br-indexer -mode derive-events -environment " + env + " -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000",
 				"go run ./cmd/br-indexer -mode resolve-evidence -environment " + env,
 				"go run ./cmd/br-indexer -mode audit-range-blocked-objects -environment " + env,
 			},

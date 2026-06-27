@@ -72,6 +72,7 @@
         { "module": "gate", "type": "Gate" },
         { "module": "killmail", "type": "Killmail" },
         { "module": "network_node", "type": "NetworkNode" },
+        { "module": "rift", "type": "Rift" },
         { "module": "storage_unit", "type": "StorageUnit" },
         { "module": "turret", "type": "Turret" }
       ]

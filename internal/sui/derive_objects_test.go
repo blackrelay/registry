@@ -249,6 +249,45 @@ func TestDeriveGraphFromInfrastructureObjectCreatesCapAndLocationEvidenceOnly(t 
 	}
 }
 
+func TestDeriveGraphFromRiftObjectCreatesSiteAndLocationEvidence(t *testing.T) {
+	object := db.SuiObjectRecord{
+		ID:          "object:0xrift:8",
+		ObjectID:    "0xrift",
+		Environment: model.EnvironmentStillness,
+		TypeRepr:    testPackageID + "::rift::Rift",
+		PackageID:   testPackageID,
+		Module:      "rift",
+		TypeName:    "Rift",
+		SourceID:    "source:sui:sui-testnet:graphql:objects",
+		ObservedAt:  time.Date(2026, 6, 25, 12, 0, 0, 0, time.UTC),
+		Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "9001",
+				},
+				"location": map[string]any{
+					"location_hash": "0xabc123",
+				},
+			},
+		},
+	}
+
+	graph := DeriveGraphFromObject(object)
+	if !hasObjectEntity(graph.Entities, "site:stillness:9001", model.EntityTypeSite) {
+		t.Fatalf("missing rift site entity %#v", graph.Entities)
+	}
+	if !hasObjectEntity(graph.Entities, "resource_object:stillness:location-hash:0xabc123", model.EntityTypeResourceObject) {
+		t.Fatalf("missing location-hash evidence entity %#v", graph.Entities)
+	}
+	if !hasObjectRelation(graph.Relations, "site:stillness:9001", "has_location_hash", "resource_object:stillness:location-hash:0xabc123") {
+		t.Fatalf("missing rift location-hash evidence relation %#v", graph.Relations)
+	}
+	if hasObjectRelation(graph.Relations, "site:stillness:9001", "located_in", "resource_object:stillness:location-hash:0xabc123") {
+		t.Fatalf("rift location hash should not be promoted to located_in relation %#v", graph.Relations)
+	}
+}
+
 func TestDeriveGraphFromKillmailObjectCreatesRelationsAndRawKillmail(t *testing.T) {
 	object := db.SuiObjectRecord{
 		ID:          "object:0xkill:8",
