@@ -7,7 +7,7 @@ Allowed sources:
 - public World API data
 - public Datahub data
 - official documentation
-- reviewed static-client evidence
+- native static-client decoder artefacts and reviewed static-client records
 - labelled observed gameplay
 - labelled community reports
 

@@ -4,20 +4,14 @@ Report suspected security vulnerabilities privately.
 
 ## Private Reporting
 
-Use GitHub private vulnerability reporting when the repository is hosted on GitHub:
+Use GitHub private vulnerability reporting:
 ```text
 https://github.com/blackrelay/registry/security/advisories/new
 ```
 
-If private reporting is unavailable, contact the maintainer privately and include enough detail to reproduce the issue without sharing secrets.
-
-## Supported Versions
-
-Black Relay Registry is pre-release software. Report security issues against the current main branch. Maintained release lines will be documented when they exist.
-
 ## Current Security Boundary
 
-Registry stores sourced public EVE Frontier world data, public game identity and public source evidence. It may ingest public chain data, public World API snapshots, public DataHub metadata, reviewed static-client evidence and manually reviewed public reports. Accepted records are public, source-backed and reviewable.
+Registry stores sourced public EVE Frontier world data, public game identity and public source evidence. It may ingest public chain data, public World API snapshots, public DataHub metadata, native static-client decoder artefacts, reviewed static-client records and manually reviewed public reports. Accepted records are public, source-backed and reviewable.
 
 Sensitive material stays outside the Registry. This includes wallet seeds, private keys, mnemonics, game credentials, access tokens, private Discord messages, private tribe intelligence, real-world identity data, unverified alt accusations, doxxing material, private operational routes and live hostile tracking.
 

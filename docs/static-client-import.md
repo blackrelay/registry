@@ -1,6 +1,15 @@
 # Static-Client Import
 
-Static-client evidence is allowed only through the artefact-backed import path.
+Registry includes native Go decoders for local EVE Frontier static-client resources. The decoders are based on reverse-engineered local static-resource layouts and are treated as evidence extractors, not as a claim that every client resource is fully understood.
+
+Static-client data enters Registry through the artefact-backed import path. Raw decoder outputs are preserved as source evidence; canonical entities and facts are created only by reviewed import commands.
+
+The current decoder scope is:
+- universe resources for regions, constellations, systems and jumps
+- `types.fsdbinary` rows with localisation-backed names, group ids, type-name ids and wreck type ids
+- reviewed enemy candidate groups and individual enemy type ids
+- production resources for blueprint, recipe and material-requirement candidates
+- deterministic comparison artefacts for patch review
 
 The current reviewed enemy candidate fixture is:
 ```text
@@ -61,7 +70,7 @@ go run ./cmd/br-import static-client-decode-production -client-path "/path/to/ev
 
 `static-client-inspect-types` is the native Go inspection path for local static-client type evidence. It resolves `types.fsdbinary`, records its SHA-256, prints the first header bytes, reports little-endian byte offsets for reviewed enemy/type probes, decodes numeric row probes when the expected type-row shape is present and resolves probed names from the localisation resource when available. This proves the local binary resource and its matching localisation evidence while keeping broad byte matches in review.
 
-`static-client-decode-types` is the native Go decode artefact path. It resolves `types.fsdbinary` and the matching English localisation resource from the client resource index, decodes stable type rows, records row offsets, records the resource hashes used as evidence and writes deterministic JSON with `schemaVersion: registry.static-client-type-decode.v1`. Use this output for patch review and for compare runs because it carries the concrete decoder evidence, not only an inspection log.
+`static-client-decode-types` is the native Go decode artefact path. It resolves `types.fsdbinary` and the matching English localisation resource from the client resource index, decodes stable type rows, records row offsets, records the resource hashes used as evidence and writes deterministic JSON with `schemaVersion: registry.static-client-type-decode.v1`. Use this output for patch review and compare runs because it carries concrete decoder evidence, not only an inspection log.
 
 The same inspection command also prints static resource candidates discovered from the client resource index. It classifies likely type, blueprint, recipe and material-requirement resources and records their SHA-256 hashes when the files can be resolved locally. Recipe promotion still goes through reviewed artefacts.
 
@@ -77,9 +86,9 @@ Current group `5130` NPC candidates found in the local Stillness client are:
 95504  Mycena
 ```
 
-## Static Recipe And Blueprint Import
+## Static Recipe and Blueprint Import
 
-The recipe importer is a reviewed JSON scaffold. It is ready for extracted recipe rows. It validates the `contracts/static-client-recipes.v1.schema.json` shape and rejects malformed reviewed rows before registering an artefact.
+The production decoder records blueprint, recipe and material-requirement candidates from local client resources. The recipe importer promotes only reviewed JSON rows. It validates the `contracts/static-client-recipes.v1.schema.json` shape and rejects malformed reviewed rows before registering an artefact.
 
 Record the local production binary evidence before a patch or import review:
 ```sh
