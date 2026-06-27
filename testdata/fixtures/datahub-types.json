@@ -1,0 +1,9 @@
+[
+  {
+    "itemId": "42",
+    "name": "Reflex",
+    "groupId": "material",
+    "category": "material",
+    "description": "Fixture public Datahub type metadata for importer smoke tests."
+  }
+]

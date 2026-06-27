@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "killmail.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "environment", "occurredAt", "sourceIds"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "systemId": { "type": "string" },
+    "systemName": { "type": "string" },
+    "victimCharacterId": { "type": "string" },
+    "victimName": { "type": "string" },
+    "killerCharacterId": { "type": "string" },
+    "killerName": { "type": "string" },
+    "killerTypeId": { "type": "string" },
+    "reporterCharacterId": { "type": "string" },
+    "reporterName": { "type": "string" },
+    "lossType": { "type": "string" },
+    "sourceIds": { "type": "array", "items": { "type": "string" } },
+    "raw": { "type": "object" }
+  }
+}

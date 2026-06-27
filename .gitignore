@@ -1,0 +1,42 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs
+/bin/
+/dist/
+/build/
+coverage.out
+coverage/
+*.test
+*.prof
+
+# Registry runtime state
+/artefacts/
+/exports/
+/local-extract/
+/published-exports/
+/tmp/
+/.runs/
+
+# Local databases and snapshots
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Logs
+*.log
+*.err.log
+*.out.log
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,169 @@
+name: CodeQL
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/scripts/**"
+      - ".github/workflows/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/scripts/**"
+      - ".github/workflows/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+  schedule:
+    - cron: "13 18 * * 5"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: registry-codeql-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preflight:
+    name: CodeQL / Preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      has_go_mod: ${{ steps.detect.outputs.has_go_mod }}
+      has_go_files: ${{ steps.detect.outputs.has_go_files }}
+      has_action_files: ${{ steps.detect.outputs.has_action_files }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Detect Analysable Source
+        id: detect
+        run: |
+          set -euo pipefail
+
+          has_go_mod=false
+          has_go_files=false
+          has_action_files=false
+
+          if [ -f go.mod ]; then
+            has_go_mod=true
+          fi
+
+          if find . -type f -name '*.go' -not -path './vendor/*' | grep -q .; then
+            has_go_files=true
+          fi
+
+          if find .github -type f \( -name '*.yml' -o -name '*.yaml' \) | grep -q .; then
+            has_action_files=true
+          fi
+
+          {
+            echo "has_go_mod=${has_go_mod}"
+            echo "has_go_files=${has_go_files}"
+            echo "has_action_files=${has_action_files}"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "# CodeQL"
+            if [ "${has_action_files}" = "true" ]; then
+              echo "- Actions analysis: enabled"
+            else
+              echo "- Actions analysis: skipped"
+            fi
+            if [ "${has_go_mod}" = "true" ] && [ "${has_go_files}" = "true" ]; then
+              echo "- Go analysis: enabled"
+              echo "- Go analysis uses manual \`go build ./...\` extraction and includes \`*_test.go\` files."
+            else
+              echo "- Go analysis: skipped"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  analyze-actions:
+    name: CodeQL / Analyze Actions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - preflight
+    if: ${{ needs.preflight.outputs.has_action_files == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          languages: actions
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          category: "/language:actions"
+
+  analyze-go:
+    name: CodeQL / Analyze Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - preflight
+    if: ${{ needs.preflight.outputs.has_go_mod == 'true' && needs.preflight.outputs.has_go_files == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    env:
+      CODEQL_EXTRACTOR_GO_OPTION_EXTRACT_TESTS: "true"
+      GOFLAGS: -buildvcs=false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          languages: go
+          build-mode: manual
+          queries: security-and-quality
+          dependency-caching: true
+
+      - name: Build Go Packages for Extraction
+        run: |
+          set -euo pipefail
+          go build ./...
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        with:
+          category: "/language:go"

@@ -1,0 +1,11 @@
+[
+  {
+    "tribeId": "42",
+    "name": "Example Relay",
+    "ticker": "ER",
+    "description": "Example public World API tribe profile.",
+    "url": "https://example.invalid/tribes/example-relay",
+    "memberCount": 3,
+    "foundedAt": 1770000000
+  }
+]

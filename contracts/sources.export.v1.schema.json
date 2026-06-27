@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sources.export.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "title", "locator"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "$ref": "import-envelope.v1.schema.json#/$defs/sourceKind" },
+    "title": { "type": "string", "minLength": 1 },
+    "locator": { "type": "string", "minLength": 1 },
+    "url": { "type": "string" },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "metadata": { "type": "object" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

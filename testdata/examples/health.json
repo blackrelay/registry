@@ -1,0 +1,9 @@
+{
+  "data": {
+    "status": "ok"
+  },
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

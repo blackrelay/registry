@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "registry.sui-packages.v1",
+  "packages": [
+    {
+      "name": "stillness-original-world",
+      "network": "sui-testnet",
+      "originalPackageId": "0x28b497559d65ab320d9da4613bf2498d5946b2c0ae3597ccfda3072ce127448c",
+      "publishedPackageId": "0xd2fd1224f881e7a705dbc211888af11655c315f2ee0f03fe680fc3176e6e4780",
+      "cycle": 5,
+      "modules": [
+        "access",
+        "assembly",
+        "character",
+        "energy",
+        "fuel",
+        "gate",
+        "inventory",
+        "killmail",
+        "location",
+        "metadata",
+        "network_node",
+        "object_registry",
+        "storage_unit",
+        "turret",
+        "world"
+      ],
+      "objectTypes": [
+        { "module": "assembly", "type": "Assembly" },
+        { "module": "character", "type": "Character" },
+        { "module": "character", "type": "PlayerProfile" },
+        { "module": "gate", "type": "Gate" },
+        { "module": "killmail", "type": "Killmail" },
+        { "module": "network_node", "type": "NetworkNode" },
+        { "module": "storage_unit", "type": "StorageUnit" },
+        { "module": "turret", "type": "Turret" }
+      ]
+    },
+    {
+      "name": "stillness-cycle-6-world",
+      "network": "sui-testnet",
+      "originalPackageId": "0x8b8a46ed766fa1358ce7c5c51f6a164b13d627a63e45343f69ed0ba0446c1aa1",
+      "publishedPackageId": "0x8b8a46ed766fa1358ce7c5c51f6a164b13d627a63e45343f69ed0ba0446c1aa1",
+      "startingCheckpoint": 352596413,
+      "cycle": 6,
+      "modules": [
+        "access",
+        "assembly",
+        "character",
+        "energy",
+        "extension_freeze",
+        "fuel",
+        "gate",
+        "in_game_id",
+        "inventory",
+        "killmail",
+        "killmail_registry",
+        "location",
+        "metadata",
+        "network_node",
+        "object_registry",
+        "rift",
+        "sig_verify",
+        "status",
+        "storage_unit",
+        "turret",
+        "world"
+      ],
+      "objectTypes": [
+        { "module": "assembly", "type": "Assembly" },
+        { "module": "character", "type": "Character" },
+        { "module": "character", "type": "PlayerProfile" },
+        { "module": "gate", "type": "Gate" },
+        { "module": "killmail", "type": "Killmail" },
+        { "module": "network_node", "type": "NetworkNode" },
+        { "module": "storage_unit", "type": "StorageUnit" },
+        { "module": "turret", "type": "Turret" }
+      ]
+    },
+    {
+      "name": "stillness-cycle-6-eve-token",
+      "network": "sui-testnet",
+      "originalPackageId": "0xac361aa5ceb726bd974f885c9dea9e55dc9bc98fa1f5731c5965a810707bf0b8",
+      "publishedPackageId": "0xac361aa5ceb726bd974f885c9dea9e55dc9bc98fa1f5731c5965a810707bf0b8",
+      "startingCheckpoint": 352596413,
+      "cycle": 6,
+      "modules": [
+        "EVE"
+      ],
+      "objectTypes": []
+    }
+  ]
+}

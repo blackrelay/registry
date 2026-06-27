@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "export.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "registry", "apiVersion", "generatedAt", "cycleScope", "entityCount", "killmailCount", "sourceCount", "files"],
+  "properties": {
+    "schemaVersion": { "const": "registry.export.v1" },
+    "registry": { "type": "string", "minLength": 1 },
+    "apiVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "cycleScope": { "type": "string", "minLength": 1 },
+    "cycles": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "uniqueItems": true
+    },
+    "includeUncycled": { "type": "boolean" },
+    "entityCount": { "type": "integer", "minimum": 0 },
+    "killmailCount": { "type": "integer", "minimum": 0 },
+    "sourceCount": { "type": "integer", "minimum": 0 },
+    "eventCount": { "type": "integer", "minimum": 0 },
+    "suiObjectCount": { "type": "integer", "minimum": 0 },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  }
+}

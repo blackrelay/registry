@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "entity": {
+        "id": "enemy:stillness:type:92096",
+        "slug": "enemy-caird-92096-stillness",
+        "type": "enemy",
+        "name": "Caird",
+        "displayName": "Caird [NPC]",
+        "environment": "stillness"
+      },
+      "facts": [
+        {
+          "key": "type_id",
+          "value": 92096,
+          "confidence": "probable",
+          "sourceId": "source:static-client:enemies:stillness"
+        }
+      ],
+      "relations": [],
+      "incomingRelations": [],
+      "sourceIds": ["source:static-client:enemies:stillness"],
+      "derived": {}
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

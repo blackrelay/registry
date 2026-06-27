@@ -1,0 +1,44 @@
+{
+  "data": {
+    "id": "killmail:stillness:fixture:caird",
+    "kind": "killmail",
+    "occurredAt": "2026-06-24T10:00:00Z",
+    "system": {
+      "entityType": "system",
+      "entityId": "system:stillness:30001001",
+      "displayName": "NN0-Y-D5",
+      "confidence": "verified",
+      "sourceIds": ["source:fixture:killmail"]
+    },
+    "victim": {
+      "entityType": "character",
+      "entityId": "character:stillness:victim",
+      "displayName": "Fixture Victim",
+      "confidence": "verified",
+      "sourceIds": ["source:fixture:killmail"]
+    },
+    "killer": {
+      "entityType": "enemy",
+      "entityId": "enemy:stillness:type:92096",
+      "displayName": "Caird [NPC]",
+      "typeId": "92096",
+      "confidence": "probable",
+      "sourceIds": ["source:static-client:enemies:stillness"],
+      "isNpc": true
+    },
+    "reporter": {
+      "entityType": "character",
+      "entityId": "character:stillness:reporter",
+      "displayName": "Fixture Reporter",
+      "confidence": "verified",
+      "sourceIds": ["source:fixture:killmail"]
+    },
+    "sources": ["source:fixture:killmail", "source:static-client:enemies:stillness"],
+    "warnings": [],
+    "summaryText": "Caird [NPC] killed Fixture Victim in NN0-Y-D5."
+  },
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

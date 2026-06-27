@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "registry.export_publish.v1",
+  "publishedAt": "2026-06-26T11:35:07Z",
+  "registry": "black-relay-registry",
+  "apiVersion": "v1",
+  "prefix": "registry",
+  "bundleId": "77e14a52376437e8f93a78ff186f2638c680bea09fdc2e55d2d03b34c568b4fb",
+  "manifestKey": "registry/bundles/77e14a52376437e8f93a78ff186f2638c680bea09fdc2e55d2d03b34c568b4fb/manifest.json",
+  "manifestSha256": "77e14a52376437e8f93a78ff186f2638c680bea09fdc2e55d2d03b34c568b4fb",
+  "latestPointerKey": "registry/latest/manifest.json",
+  "files": [
+    {
+      "path": "catalog.json",
+      "objectKey": "registry/bundles/77e14a52376437e8f93a78ff186f2638c680bea09fdc2e55d2d03b34c568b4fb/catalog.json",
+      "contentType": "application/json",
+      "sha256": "c3e30767cc458841f967a5c9a2d2e76cea305b6185214cd18fad140d767497ec",
+      "sizeBytes": 345,
+      "rowCount": 1
+    }
+  ]
+}

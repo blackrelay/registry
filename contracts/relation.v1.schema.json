@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "relation.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subjectEntityId", "predicate", "objectEntityId", "sourceId", "confidence", "environment"],
+  "properties": {
+    "subjectEntityId": { "type": "string", "minLength": 1 },
+    "predicate": { "type": "string", "minLength": 1 },
+    "objectEntityId": { "type": "string", "minLength": 1 },
+    "sourceId": { "type": "string", "minLength": 1 },
+    "confidence": { "$ref": "import-envelope.v1.schema.json#/$defs/confidence" },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" }
+  }
+}

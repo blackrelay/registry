@@ -1,0 +1,18 @@
+{
+  "id": "killmail:stillness:fixture:caird",
+  "environment": "stillness",
+  "occurredAt": "2026-06-24T10:00:00Z",
+  "systemId": "system:stillness:nn0-y-d5",
+  "systemName": "NN0-Y-D5",
+  "victimCharacterId": "character:stillness:fixture-victim",
+  "victimName": "Fixture Victim",
+  "killerTypeId": "92096",
+  "reporterCharacterId": "character:stillness:fixture-reporter",
+  "reporterName": "Fixture Reporter",
+  "lossType": "ship_destroyed",
+  "sourceIds": ["source:fixture:killmail"],
+  "raw": {
+    "fixture": true,
+    "note": "NPC killmail fixture for semantic resolver tests."
+  }
+}

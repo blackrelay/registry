@@ -1,0 +1,43 @@
+{
+  "data": {
+    "id": "killmail:stillness:player:example",
+    "kind": "killmail",
+    "occurredAt": "2026-06-25T10:30:00Z",
+    "system": {
+      "entityType": "system",
+      "entityId": "system:stillness:30001001",
+      "displayName": "NN0-Y-D5",
+      "confidence": "verified",
+      "sourceIds": ["source:sui:sui-testnet:graphql"]
+    },
+    "victim": {
+      "entityType": "character",
+      "entityId": "character:stillness:100",
+      "displayName": "Victim",
+      "confidence": "verified",
+      "sourceIds": ["source:sui:sui-testnet:graphql"]
+    },
+    "killer": {
+      "entityType": "character",
+      "entityId": "character:stillness:200",
+      "displayName": "Killer",
+      "confidence": "verified",
+      "sourceIds": ["source:sui:sui-testnet:graphql"],
+      "isNpc": false
+    },
+    "reporter": {
+      "entityType": "character",
+      "entityId": "character:stillness:300",
+      "displayName": "Reporter",
+      "confidence": "verified",
+      "sourceIds": ["source:sui:sui-testnet:graphql"]
+    },
+    "sources": ["source:sui:sui-testnet:graphql"],
+    "warnings": [],
+    "summaryText": "Killer killed Victim in NN0-Y-D5."
+  },
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

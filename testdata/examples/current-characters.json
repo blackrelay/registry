@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "entity": {
+        "id": "character:stillness:2112091476",
+        "slug": "character-2112091476-stillness",
+        "type": "character",
+        "name": "Tao",
+        "displayName": "Tao",
+        "environment": "stillness"
+      },
+      "facts": [
+        {
+          "key": "character_id",
+          "value": "2112091476",
+          "confidence": "verified",
+          "sourceId": "source:sui:sui-testnet:graphql"
+        }
+      ],
+      "relations": [],
+      "incomingRelations": [],
+      "sourceIds": ["source:sui:sui-testnet:graphql"],
+      "derived": {
+        "publicActivityCount": 3
+      }
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

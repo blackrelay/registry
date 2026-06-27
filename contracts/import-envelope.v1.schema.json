@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "import-envelope.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "environment", "source", "entities", "facts", "relations", "events"],
+  "properties": {
+    "schemaVersion": { "const": "registry.import.v1" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "confidence", "artefactId", "checkedAt"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/sourceKind" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "artefactId": { "type": "string", "minLength": 1 },
+        "checkedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "entities": { "type": "array", "items": { "$ref": "entity.v1.schema.json" } },
+    "facts": { "type": "array", "items": { "$ref": "fact.v1.schema.json" } },
+    "relations": { "type": "array", "items": { "$ref": "relation.v1.schema.json" } },
+    "events": { "type": "array", "items": { "$ref": "event.v1.schema.json" } },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "groupId", "typeId", "confidence", "basis"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "groupId": { "type": "integer", "minimum": 1 },
+          "typeId": { "type": "integer", "minimum": 1 },
+          "confidence": { "$ref": "#/$defs/confidence" },
+          "basis": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "environment": {
+      "type": "string",
+      "enum": ["stillness", "utopia", "unknown"]
+    },
+    "sourceKind": {
+      "type": "string",
+      "enum": [
+        "onchain",
+        "sui_event",
+        "sui_object",
+        "world_api",
+        "datahub",
+        "static_client_data",
+        "reverse_engineered",
+        "observed_gameplay",
+        "community_report",
+        "manual_inference"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["verified", "probable", "reported", "stale", "unknown"]
+    },
+    "reviewStatus": {
+      "type": "string",
+      "enum": ["candidate", "reviewed", "published", "rejected", "superseded"]
+    },
+    "freshness": {
+      "type": "string",
+      "enum": ["live_indexed", "cached_snapshot", "static_cycle_data", "cycle_archive", "manual_observation", "unknown"]
+    },
+    "entityType": {
+      "type": "string",
+      "enum": [
+        "character",
+        "player",
+        "tribe",
+        "alliance",
+        "item",
+        "material",
+        "recipe",
+        "blueprint",
+        "ship",
+        "structure",
+        "assembly",
+        "gate",
+        "storage",
+        "market",
+        "turret",
+        "system",
+        "region",
+        "constellation",
+        "site",
+        "resource_object",
+        "enemy",
+        "killmail",
+        "event",
+        "route",
+        "unknown"
+      ]
+    }
+  }
+}

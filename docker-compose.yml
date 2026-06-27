@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: blackrelay
+      POSTGRES_PASSWORD: blackrelay
+      POSTGRES_DB: blackrelay_registry
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blackrelay -d blackrelay_registry"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - registry-postgres:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgres://blackrelay:blackrelay@postgres:5432/blackrelay_registry?sslmode=disable
+      BR_REGISTRY_ADDR: 0.0.0.0:8080
+      BR_REGISTRY_ARTEFACT_ROOT: /var/lib/blackrelay-registry/artefacts
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - registry-artefacts:/var/lib/blackrelay-registry/artefacts
+
+volumes:
+  registry-postgres:
+  registry-artefacts:

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "registry.static-client-recipes.v1",
+  "environment": "stillness",
+  "clientBuild": "fixture",
+  "patchLabel": "fixture",
+  "recipes": [
+    {
+      "recipeId": "reflex",
+      "name": "Reflex",
+      "outputTypeId": 1001,
+      "outputQuantity": 1,
+      "blueprintTypeId": 75001,
+      "facilityTypeId": 70001,
+      "inputs": [
+        { "typeId": 3001, "quantity": 3 },
+        { "typeId": 3002, "quantity": 1 }
+      ],
+      "sourceContext": "reviewed static-client recipe fixture"
+    }
+  ]
+}

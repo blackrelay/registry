@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "registry.import.v1",
+  "environment": "stillness",
+  "source": {
+    "kind": "static_client_data",
+    "confidence": "probable",
+    "artefactId": "artefact:filled-after-registration",
+    "checkedAt": "2026-06-25T12:00:00Z"
+  },
+  "entities": [],
+  "facts": [],
+  "relations": [],
+  "events": [],
+  "candidates": [
+    { "name": "Caird", "groupId": 5033, "typeId": 92096, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Dowser", "groupId": 5033, "typeId": 92101, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Grave Caird", "groupId": 5033, "typeId": 92271, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Grave Luthier", "groupId": 5033, "typeId": 92272, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Grave Ostler", "groupId": 5033, "typeId": 92273, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Grave Shambler", "groupId": 5033, "typeId": 92275, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Grave Wright", "groupId": 5033, "typeId": 92274, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Hellier", "groupId": 5033, "typeId": 93871, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Luthier", "groupId": 5033, "typeId": 92097, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Ostler", "groupId": 5033, "typeId": 92098, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Scrivener", "groupId": 5033, "typeId": 92102, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Shambler", "groupId": 5033, "typeId": 92100, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Wright", "groupId": 5033, "typeId": 92099, "confidence": "probable", "basis": "confirmed enemy group 5033" },
+    { "name": "Symbiote Enforcer", "groupId": 4963, "typeId": 91180, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Symbiote Processor", "groupId": 4963, "typeId": 91179, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Symbiote Scout", "groupId": 4963, "typeId": 91291, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Symbiote Striker", "groupId": 4963, "typeId": 91183, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Xeroti Tidofiza", "groupId": 4963, "typeId": 91011, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Xeroti Tidofiza", "groupId": 4963, "typeId": 91368, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Xeroti Tidofiza", "groupId": 4963, "typeId": 91369, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Xeroti Tidofiza", "groupId": 4963, "typeId": 91370, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Xeroti Tidofiza", "groupId": 4963, "typeId": 91371, "confidence": "probable", "basis": "confirmed enemy group 4963" },
+    { "name": "Defective Mooneater", "groupId": 4770, "typeId": 85278, "confidence": "probable", "basis": "confirmed enemy group 4770" },
+    { "name": "Feral Mooneater", "groupId": 4770, "typeId": 83487, "confidence": "probable", "basis": "confirmed enemy group 4770" },
+    { "name": "Feral Mooneater", "groupId": 27, "typeId": 85702, "confidence": "probable", "basis": "reviewed individual enemy row; group 27 is not an enemy group" },
+    { "name": "Inert Drone", "groupId": 306, "typeId": 88089, "confidence": "probable", "basis": "reviewed individual enemy row outside enemy groups" }
+  ]
+}

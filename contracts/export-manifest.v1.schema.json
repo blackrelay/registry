@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "export-manifest.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "registry", "apiVersion", "generatedAt", "cycleScope", "database", "files", "highWaterMarks"],
+  "properties": {
+    "schemaVersion": { "const": "registry.export_manifest.v1" },
+    "registry": { "type": "string", "minLength": 1 },
+    "apiVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "cycleScope": { "type": "string", "minLength": 1 },
+    "cycles": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "uniqueItems": true
+    },
+    "includeUncycled": { "type": "boolean" },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine"],
+      "properties": {
+        "engine": { "type": "string", "minLength": 1 },
+        "database": { "type": "string" },
+        "serverVersion": { "type": "string" },
+        "schemaVersions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "contentType", "sha256", "sizeBytes", "rowCount"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "contentType": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "sizeBytes": { "type": "integer", "minimum": 0 },
+          "rowCount": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "highWaterMarks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rowCount", "complete", "cursorOrder"],
+        "properties": {
+          "rowCount": { "type": "integer", "minimum": 0 },
+          "complete": { "type": "boolean" },
+          "cursorOrder": { "type": "string", "minLength": 1 },
+          "firstId": { "type": "string" },
+          "firstTime": { "type": "string", "format": "date-time" },
+          "lastId": { "type": "string" },
+          "lastTime": { "type": "string", "format": "date-time" },
+          "nextCursor": { "type": "string" }
+        }
+      }
+    }
+  }
+}

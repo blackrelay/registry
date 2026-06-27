@@ -1,0 +1,35 @@
+{
+  "data": {
+    "environment": "stillness",
+    "network": "sui-testnet",
+    "coverageBasis": "cursor_table",
+    "fullCoverageProven": false,
+    "targetCount": 652,
+    "eventTargets": 620,
+    "objectTargets": 24,
+    "derivationTargets": 8,
+    "indexedTargets": 646,
+    "erroredTargets": 0,
+    "limitedTargets": 0,
+    "notSeenTargets": 0,
+    "rangeBlockedTargets": 6,
+    "rowsProcessed": 4306959,
+    "targets": [
+      {
+        "kind": "object",
+        "status": "range_blocked",
+        "cursorKind": "sui_object",
+        "environment": "stillness",
+        "network": "sui-testnet",
+        "rowsProcessed": 592,
+        "errorCount": 3,
+        "lastErrorSummary": "sui GraphQL returned errors: Request is outside consistent range",
+        "providerRangeBlocked": true
+      }
+    ]
+  },
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "entity": {
+        "id": "material:stillness:type:77889",
+        "slug": "material-salvaged-materials-77889-stillness",
+        "type": "material",
+        "name": "Salvaged Materials",
+        "displayName": "Salvaged Materials",
+        "environment": "stillness"
+      },
+      "facts": [
+        {
+          "key": "type_id",
+          "value": 77889,
+          "confidence": "probable",
+          "sourceId": "source:static-client:types:stillness"
+        }
+      ],
+      "relations": [],
+      "incomingRelations": [],
+      "sourceIds": ["source:static-client:types:stillness"],
+      "derived": {}
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

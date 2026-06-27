@@ -1,0 +1,23 @@
+{
+  "data": [
+    {
+      "id": "source-gap:stillness:sui-object-provider-range-blocked",
+      "kind": "sui_object_provider_range_blocked",
+      "category": "provider_blocked",
+      "severity": "info",
+      "environment": "stillness",
+      "count": 6,
+      "summary": "Broad Sui object-by-type cursor targets are outside the public GraphQL provider's consistent-range window.",
+      "recommendedAction": "Keep the raw cursor error as evidence. Treat events as the primary chain source, repair semantic state from event derivation and use World API or static-client imports for names and static data.",
+      "suggestedCommands": [
+        "go run ./cmd/br-indexer -mode derive-events -environment stillness -module killmail,character,gate,assembly,storage_unit,turret -derive-batch-size 5000",
+        "go run ./cmd/br-indexer -mode resolve-evidence -environment stillness",
+        "go run ./cmd/br-indexer -mode audit-range-blocked-objects -environment stillness"
+      ]
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

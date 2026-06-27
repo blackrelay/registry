@@ -1,0 +1,479 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, for example v0.1.0 or v0.1.0-rc.1"
+        required: true
+        type: string
+      target:
+        description: "Git branch, tag or full commit SHA to release from"
+        required: true
+        default: "main"
+        type: string
+      publish:
+        description: "Publish the GitHub release after verification"
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: "Mark the GitHub release as a prerelease"
+        required: true
+        default: true
+        type: boolean
+      draft:
+        description: "Create a draft GitHub release"
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registry-release-${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -buildvcs=false
+  CSPELL_VERSION: 10.0.1
+  GOVULNCHECK_VERSION: v1.5.0
+
+jobs:
+  release:
+    name: Release / Verify And Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Create Git Askpass Helper
+        run: |
+          set -euo pipefail
+
+          askpass="${RUNNER_TEMP}/release-git-askpass.sh"
+          cat > "${askpass}" <<'EOF'
+          #!/usr/bin/env sh
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "${GITHUB_TOKEN:?}" ;;
+            *) exit 1 ;;
+          esac
+          EOF
+          chmod 700 "${askpass}"
+          printf 'RELEASE_GIT_ASKPASS=%s\n' "${askpass}" >> "${GITHUB_ENV}"
+
+      - name: Resolve Release Metadata
+        id: metadata
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          INPUT_DRAFT: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+          INPUT_PRERELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
+          INPUT_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || false }}
+          INPUT_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || '' }}
+          INPUT_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          trim() {
+            local value="$1"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            printf '%s' "${value}"
+          }
+
+          git fetch --force --tags origin
+
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            version="$(trim "${INPUT_VERSION}")"
+            target="$(trim "${INPUT_TARGET}")"
+            publish="${INPUT_PUBLISH}"
+            prerelease="${INPUT_PRERELEASE}"
+            draft="${INPUT_DRAFT}"
+
+            if [ -z "${target}" ]; then
+              echo "Error: target is required"
+              exit 1
+            fi
+
+            git checkout --detach "${target}"
+          else
+            version="${GITHUB_REF_NAME}"
+            target="${GITHUB_REF}"
+            publish="true"
+            draft="false"
+            prerelease="false"
+            if [[ "${version}" == *-* ]]; then
+              prerelease="true"
+            fi
+          fi
+
+          if [[ ! "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?$ ]]; then
+            echo "Error: version must follow SemVer form such as v0.1.0 or v0.1.0-rc.1"
+            exit 1
+          fi
+
+          case "${publish}" in true|false) ;; *) echo "Error: publish must be true or false"; exit 1 ;; esac
+          case "${prerelease}" in true|false) ;; *) echo "Error: prerelease must be true or false"; exit 1 ;; esac
+          case "${draft}" in true|false) ;; *) echo "Error: draft must be true or false"; exit 1 ;; esac
+
+          commit="$(git rev-parse HEAD)"
+
+          GIT_ASKPASS="${RELEASE_GIT_ASKPASS}" GIT_TERMINAL_PROMPT=0 \
+            git fetch --no-tags origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
+          if ! git merge-base --is-ancestor "${commit}" "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+            echo "Error: target commit ${commit} is not reachable from origin/${DEFAULT_BRANCH}"
+            exit 1
+          fi
+
+          tag_exists="false"
+          if git rev-parse "refs/tags/${version}" >/dev/null 2>&1; then
+            tag_exists="true"
+            tag_commit="$(git rev-list -n 1 "refs/tags/${version}")"
+            if [ "${tag_commit}" != "${commit}" ]; then
+              echo "Error: existing tag ${version} points to ${tag_commit}, not ${commit}"
+              exit 1
+            fi
+          fi
+
+          {
+            echo "version=${version}"
+            echo "target=${target}"
+            echo "commit=${commit}"
+            echo "publish=${publish}"
+            echo "prerelease=${prerelease}"
+            echo "draft=${draft}"
+            echo "tag_exists=${tag_exists}"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "# Release"
+            echo
+            echo "- Version: ${version}"
+            echo "- Target: ${target}"
+            echo "- Commit: ${commit}"
+            echo "- Publish: ${publish}"
+            echo "- Draft: ${draft}"
+            echo "- Prerelease: ${prerelease}"
+            echo "- Existing tag: ${tag_exists}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+
+      - name: Print Tool Versions
+        run: |
+          set -euo pipefail
+          go version
+          gpg --version
+          gh --version
+
+      - name: Check Formatting
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l cmd internal openapi)"
+
+      - name: Verify Modules
+        run: |
+          set -euo pipefail
+          go mod verify
+
+      - name: Check Module Tidiness
+        run: |
+          set -euo pipefail
+          go mod tidy -diff
+
+      - name: Run Tests
+        run: |
+          set -euo pipefail
+          go test -count=1 ./...
+
+      - name: Run Vet
+        run: |
+          set -euo pipefail
+          go vet ./...
+
+      - name: Run Staticcheck
+        run: |
+          set -euo pipefail
+          go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+      - name: Run govulncheck
+        run: |
+          set -euo pipefail
+          go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+      - name: Validate Docs And Contracts
+        run: |
+          set -euo pipefail
+          go test -count=1 ./internal/contracts ./openapi ./internal/terminology
+          npx --yes "cspell@${CSPELL_VERSION}" lint "README.md" "docs/**/*.md" ".github/**/*.md" ".github/**/*.yml" ".github/**/*.yaml" --config .github/config/cspell.json --no-progress --no-summary --no-must-find-files
+
+      - name: Validate Workflows
+        run: |
+          set -euo pipefail
+          go run github.com/rhysd/actionlint/cmd/actionlint@latest
+
+      - name: Check Diff Formatting
+        run: |
+          set -euo pipefail
+          git diff --check
+
+      - name: Ensure Working Tree Is Clean
+        run: |
+          set -euo pipefail
+          status="$(git status --porcelain=v1)"
+          if [ -n "${status}" ]; then
+            echo "Error: working tree changed during release verification"
+            echo "${status}"
+            exit 1
+          fi
+
+      - name: Build Release Assets
+        run: |
+          set -euo pipefail
+          bash .github/scripts/release/build-assets.sh "${{ steps.metadata.outputs.version }}" dist/release-assets
+
+      - name: Verify Release Assets
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.metadata.outputs.version }}"
+          platforms=(
+            linux_amd64.tar.gz
+            linux_arm64.tar.gz
+            windows_amd64.zip
+            windows_arm64.zip
+            darwin_amd64.tar.gz
+            darwin_arm64.tar.gz
+            freebsd_amd64.tar.gz
+            openbsd_amd64.tar.gz
+            netbsd_amd64.tar.gz
+          )
+
+          for platform in "${platforms[@]}"; do
+            asset="dist/release-assets/blackrelay-registry_${version}_${platform}"
+            if [ ! -f "${asset}" ]; then
+              echo "Missing release asset: ${asset}"
+              exit 1
+            fi
+          done
+
+          (
+            cd dist/release-assets
+            sha256sum -c SHA2-256SUMS
+            sha512sum -c SHA2-512SUMS
+          )
+
+      - name: Import Release Signing Key
+        env:
+          RELEASE_SIGNING_PRIVATE_KEY: ${{ secrets.RELEASE_SIGNING_PRIVATE_KEY }}
+          RELEASE_SIGNING_KEY_FINGERPRINT: ${{ vars.RELEASE_SIGNING_KEY_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RELEASE_SIGNING_PRIVATE_KEY}" ]; then
+            echo "Error: RELEASE_SIGNING_PRIVATE_KEY is required"
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_SIGNING_KEY_FINGERPRINT}" ]; then
+            echo "Error: RELEASE_SIGNING_KEY_FINGERPRINT is required"
+            exit 1
+          fi
+
+          gpg_home="${RUNNER_TEMP}/blackrelay-registry-gnupg"
+          mkdir -p "${gpg_home}"
+          chmod 700 "${gpg_home}"
+          printf 'GNUPGHOME=%s\n' "${gpg_home}" >> "${GITHUB_ENV}"
+
+          printf '%s' "${RELEASE_SIGNING_PRIVATE_KEY}" | GNUPGHOME="${gpg_home}" gpg --batch --import
+          GNUPGHOME="${gpg_home}" gpg --batch --list-secret-keys "${RELEASE_SIGNING_KEY_FINGERPRINT}"
+          GNUPGHOME="${gpg_home}" gpg --batch --armor --export "${RELEASE_SIGNING_KEY_FINGERPRINT}" > dist/release-assets/public.key
+
+      - name: Sign Checksum Manifests
+        env:
+          RELEASE_SIGNING_KEY_FINGERPRINT: ${{ vars.RELEASE_SIGNING_KEY_FINGERPRINT }}
+          RELEASE_SIGNING_PASSPHRASE: ${{ secrets.RELEASE_SIGNING_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RELEASE_SIGNING_KEY_FINGERPRINT}" ]; then
+            echo "Error: RELEASE_SIGNING_KEY_FINGERPRINT is required"
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_SIGNING_PASSPHRASE}" ]; then
+            echo "Error: RELEASE_SIGNING_PASSPHRASE is required"
+            exit 1
+          fi
+
+          cd dist/release-assets
+          for manifest in SHA2-256SUMS SHA2-512SUMS; do
+            printf '%s' "${RELEASE_SIGNING_PASSPHRASE}" | gpg \
+              --batch \
+              --yes \
+              --pinentry-mode loopback \
+              --passphrase-fd 0 \
+              --local-user "${RELEASE_SIGNING_KEY_FINGERPRINT}" \
+              --armor \
+              --detach-sign \
+              --output "${manifest}.sig" \
+              "${manifest}"
+            gpg --batch --verify "${manifest}.sig" "${manifest}"
+          done
+
+      - name: Verify Signed Manifests
+        run: |
+          set -euo pipefail
+
+          expected_assets=(
+            dist/release-assets/SHA2-256SUMS
+            dist/release-assets/SHA2-256SUMS.sig
+            dist/release-assets/SHA2-512SUMS
+            dist/release-assets/SHA2-512SUMS.sig
+            dist/release-assets/public.key
+          )
+
+          for asset in "${expected_assets[@]}"; do
+            if [ ! -f "${asset}" ]; then
+              echo "Missing expected release manifest asset: ${asset}"
+              exit 1
+            fi
+          done
+
+          (
+            cd dist/release-assets
+            sha256sum -c SHA2-256SUMS
+            sha512sum -c SHA2-512SUMS
+            gpg --batch --verify SHA2-256SUMS.sig SHA2-256SUMS
+            gpg --batch --verify SHA2-512SUMS.sig SHA2-512SUMS
+          )
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: blackrelay-registry-${{ steps.metadata.outputs.version }}-release-assets
+          path: dist/release-assets/*
+          if-no-files-found: error
+
+      - name: Build Release Notes
+        id: release_notes
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.metadata.outputs.version }}"
+          notes_file="${RUNNER_TEMP}/release-notes.md"
+          release_url="https://github.com/blackrelay/registry/releases/tag/${version}"
+          download_url="https://github.com/blackrelay/registry/releases/download/${version}"
+
+          cat > "${notes_file}" <<EOF
+          # Black Relay Registry ${version}
+
+          <div align="center">
+
+          [![Release](https://img.shields.io/badge/Release-${version}-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${release_url} "Release ${version}")
+          [![SHA-256](https://img.shields.io/badge/SHA--256-signed-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/SHA2-256SUMS "Signed SHA-256 Manifest")
+          [![SHA-512](https://img.shields.io/badge/SHA--512-signed-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/SHA2-512SUMS "Signed SHA-512 Manifest")
+          [![Public Key](https://img.shields.io/badge/Public%20Key-release-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/public.key "Release Signing Public Key")
+          [![OpenAPI](https://img.shields.io/badge/OpenAPI-v1-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/openapi/registry.v1.yaml "OpenAPI Contract")
+          [![Licence](https://img.shields.io/badge/Licence-Apache--2.0-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/LICENSE "Apache-2.0 Licence")
+
+          </div>
+
+          This release contains command archives for Linux, Windows, macOS, FreeBSD, OpenBSD and NetBSD.
+
+          Verify downloaded archives with the signed checksum manifests before use. Import public.key, verify SHA2-256SUMS.sig against SHA2-256SUMS or SHA2-512SUMS.sig against SHA2-512SUMS then check the downloaded archive against the verified manifest.
+
+          ## Assets
+
+          | Platform | Archive |
+          | --- | --- |
+          | Linux amd64 | [blackrelay-registry_${version}_linux_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_linux_amd64.tar.gz) |
+          | Linux arm64 | [blackrelay-registry_${version}_linux_arm64.tar.gz](${download_url}/blackrelay-registry_${version}_linux_arm64.tar.gz) |
+          | Windows amd64 | [blackrelay-registry_${version}_windows_amd64.zip](${download_url}/blackrelay-registry_${version}_windows_amd64.zip) |
+          | Windows arm64 | [blackrelay-registry_${version}_windows_arm64.zip](${download_url}/blackrelay-registry_${version}_windows_arm64.zip) |
+          | macOS amd64 | [blackrelay-registry_${version}_darwin_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_darwin_amd64.tar.gz) |
+          | macOS arm64 | [blackrelay-registry_${version}_darwin_arm64.tar.gz](${download_url}/blackrelay-registry_${version}_darwin_arm64.tar.gz) |
+          | FreeBSD amd64 | [blackrelay-registry_${version}_freebsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_freebsd_amd64.tar.gz) |
+          | OpenBSD amd64 | [blackrelay-registry_${version}_openbsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_openbsd_amd64.tar.gz) |
+          | NetBSD amd64 | [blackrelay-registry_${version}_netbsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_netbsd_amd64.tar.gz) |
+
+          ## Verification Files
+
+          - [SHA2-256SUMS](${download_url}/SHA2-256SUMS)
+          - [SHA2-256SUMS.sig](${download_url}/SHA2-256SUMS.sig)
+          - [SHA2-512SUMS](${download_url}/SHA2-512SUMS)
+          - [SHA2-512SUMS.sig](${download_url}/SHA2-512SUMS.sig)
+          - [public.key](${download_url}/public.key)
+          - [Licence](https://github.com/blackrelay/registry/blob/${version}/LICENSE)
+          EOF
+
+          echo "notes_file=${notes_file}" >> "${GITHUB_OUTPUT}"
+
+      - name: Create Release Tag
+        if: ${{ steps.metadata.outputs.publish == 'true' && steps.metadata.outputs.tag_exists == 'false' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.metadata.outputs.version }}"
+          commit="${{ steps.metadata.outputs.commit }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${version}" -m "Release ${version}" "${commit}"
+          GIT_ASKPASS="${RELEASE_GIT_ASKPASS}" GIT_TERMINAL_PROMPT=0 git push origin "refs/tags/${version}"
+
+      - name: Publish GitHub Release
+        if: ${{ steps.metadata.outputs.publish == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.metadata.outputs.version }}"
+          release_flags=()
+
+          if [ "${{ steps.metadata.outputs.prerelease }}" = "true" ]; then
+            release_flags+=(--prerelease)
+          fi
+
+          if [ "${{ steps.metadata.outputs.draft }}" = "true" ]; then
+            release_flags+=(--draft)
+          fi
+
+          if gh release view "${version}" >/dev/null 2>&1; then
+            echo "Error: release ${version} already exists"
+            exit 1
+          fi
+
+          gh release create "${version}" \
+            dist/release-assets/* \
+            --title "Black Relay Registry ${version}" \
+            --notes-file "${{ steps.release_notes.outputs.notes_file }}" \
+            --verify-tag \
+            "${release_flags[@]}"

@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "entity": {
+        "id": "system:stillness:30001001",
+        "slug": "system-30001001-stillness",
+        "type": "system",
+        "name": "NN0-Y-D5",
+        "displayName": "NN0-Y-D5",
+        "environment": "stillness"
+      },
+      "facts": [
+        {
+          "key": "system_id",
+          "value": "30001001",
+          "confidence": "verified",
+          "sourceId": "source:static-client:universe:stillness"
+        }
+      ],
+      "relations": [],
+      "incomingRelations": [],
+      "sourceIds": ["source:static-client:universe:stillness"],
+      "derived": {
+        "routeEdgeCount": 2
+      }
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fact.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entityId", "key", "value", "sourceId", "confidence", "environment", "reviewStatus"],
+  "properties": {
+    "entityId": { "type": "string", "minLength": 1 },
+    "key": { "type": "string", "minLength": 1 },
+    "value": true,
+    "sourceId": { "type": "string", "minLength": 1 },
+    "confidence": { "$ref": "import-envelope.v1.schema.json#/$defs/confidence" },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "reviewStatus": { "$ref": "import-envelope.v1.schema.json#/$defs/reviewStatus" },
+    "importId": { "type": "string" },
+    "publishedAt": { "type": "string", "format": "date-time" }
+  }
+}

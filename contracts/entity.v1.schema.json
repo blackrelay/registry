@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "entity.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "slug", "entityType", "name", "environment"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "slug": { "type": "string", "minLength": 1 },
+    "entityType": { "$ref": "import-envelope.v1.schema.json#/$defs/entityType" },
+    "name": { "type": "string", "minLength": 1 },
+    "displayName": { "type": "string" },
+    "summary": { "type": "string" },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
+    "cycle": { "type": "integer", "minimum": 1 },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

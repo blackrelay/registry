@@ -1,0 +1,376 @@
+name: CI / Main
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: registry-ci-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -buildvcs=false
+  CSPELL_VERSION: 10.0.1
+  GOVULNCHECK_VERSION: v1.5.0
+
+jobs:
+  test:
+    name: CI / Test (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x64
+            os: ubuntu-latest
+          - label: windows-x64
+            os: windows-latest
+          - label: macos-arm64
+            os: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+
+      - name: Print Tool Versions
+        run: |
+          set -euo pipefail
+          go version
+
+      - name: Check Formatting
+        run: |
+          set -euo pipefail
+          test -z "$(gofmt -l cmd internal openapi)"
+
+      - name: Run Tests
+        run: |
+          set -euo pipefail
+          go test -count=1 ./...
+
+      - name: Build Commands
+        run: |
+          set -euo pipefail
+          go build -buildvcs=false ./cmd/...
+
+  freebsd-test:
+    name: CI / FreeBSD
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Run Tests In FreeBSD
+        uses: vmactions/freebsd-vm@4441bea20b31bfa77329a5af583199362489567e # v1.4.9
+        with:
+          usesh: true
+          sync: rsync
+          copyback: false
+          release: "15.1"
+          prepare: |
+            pkg install -y go git
+          run: |
+            set -eu
+            export GOFLAGS="-buildvcs=false"
+            export GOTOOLCHAIN="auto"
+            go version
+            go test -count=1 ./...
+            go build -buildvcs=false ./cmd/...
+
+  openbsd-test:
+    name: CI / OpenBSD
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Run Tests In OpenBSD
+        uses: vmactions/openbsd-vm@18edb32f4e48dae5865d7b8b3a9587bc01218a20 # v1.4.4
+        with:
+          usesh: true
+          sync: rsync
+          copyback: false
+          release: "7.9"
+          prepare: |
+            pkg_add go git
+          run: |
+            set -eu
+            export GOFLAGS="-buildvcs=false"
+            export GOTOOLCHAIN="auto"
+            go version
+            go test -count=1 ./...
+            go build -buildvcs=false ./cmd/...
+
+  netbsd-test:
+    name: CI / NetBSD
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Run Tests In NetBSD
+        uses: vmactions/netbsd-vm@99816dccf75edf233ed6cd00a159e3a5b85ea373 # v1.4.0
+        with:
+          usesh: true
+          sync: rsync
+          copyback: false
+          release: "10.1"
+          prepare: |
+            /usr/sbin/pkg_add -u go git || /usr/sbin/pkg_add go git
+          run: |
+            set -eu
+            export GOFLAGS="-buildvcs=false"
+            export GOTOOLCHAIN="auto"
+            go version
+            go test -count=1 ./...
+            go build -buildvcs=false ./cmd/...
+
+  static-analysis:
+    name: CI / Static Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+
+      - name: Verify Modules
+        run: |
+          set -euo pipefail
+          go mod verify
+
+      - name: Check Module Tidiness
+        run: |
+          set -euo pipefail
+          go mod tidy -diff
+
+      - name: Run Vet
+        run: |
+          set -euo pipefail
+          go vet ./...
+
+      - name: Run Staticcheck
+        run: |
+          set -euo pipefail
+          go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+  docs-contracts:
+    name: CI / Docs And Contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+
+      - name: Validate Contracts And OpenAPI
+        run: |
+          set -euo pipefail
+          go test -count=1 ./internal/contracts ./openapi
+
+      - name: Run Terminology Guard
+        run: |
+          set -euo pipefail
+          go test -count=1 ./internal/terminology
+
+      - name: Run Spellcheck
+        run: |
+          set -euo pipefail
+          npx --yes "cspell@${CSPELL_VERSION}" lint "README.md" "docs/**/*.md" ".github/**/*.md" ".github/**/*.yml" ".github/**/*.yaml" --config .github/config/cspell.json --no-progress --no-summary --no-must-find-files
+
+  smoke:
+    name: CI / Container Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+
+      - name: Run Smoke Path
+        run: |
+          set -euo pipefail
+          sh ./scripts/smoke.sh
+
+  vulnerabilities:
+    name: CI / Vulnerability Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
+
+      - name: Run govulncheck
+        run: |
+          set -euo pipefail
+          go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+  workflow-validation:
+    name: CI / Workflow Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          go run github.com/rhysd/actionlint/cmd/actionlint@latest
+
+  cleanup:
+    name: CI / Cleanup
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs:
+      - test
+      - freebsd-test
+      - openbsd-test
+      - netbsd-test
+      - static-analysis
+      - docs-contracts
+      - smoke
+      - vulnerabilities
+      - workflow-validation
+    steps:
+      - name: Evaluate Workflow Results
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          FREEBSD_TEST_RESULT: ${{ needs.freebsd-test.result }}
+          OPENBSD_TEST_RESULT: ${{ needs.openbsd-test.result }}
+          NETBSD_TEST_RESULT: ${{ needs.netbsd-test.result }}
+          STATIC_ANALYSIS_RESULT: ${{ needs.static-analysis.result }}
+          DOCS_CONTRACTS_RESULT: ${{ needs.docs-contracts.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+          VULNERABILITIES_RESULT: ${{ needs.vulnerabilities.result }}
+          WORKFLOW_VALIDATION_RESULT: ${{ needs.workflow-validation.result }}
+        run: |
+          set -euo pipefail
+
+          declare -A results=(
+            ["CI / Test"]="${TEST_RESULT}"
+            ["CI / FreeBSD"]="${FREEBSD_TEST_RESULT}"
+            ["CI / OpenBSD"]="${OPENBSD_TEST_RESULT}"
+            ["CI / NetBSD"]="${NETBSD_TEST_RESULT}"
+            ["CI / Static Analysis"]="${STATIC_ANALYSIS_RESULT}"
+            ["CI / Docs And Contracts"]="${DOCS_CONTRACTS_RESULT}"
+            ["CI / Container Smoke"]="${SMOKE_RESULT}"
+            ["CI / Vulnerability Scan"]="${VULNERABILITIES_RESULT}"
+            ["CI / Workflow Validation"]="${WORKFLOW_VALIDATION_RESULT}"
+          )
+
+          failed=0
+
+          {
+            echo "# CI / Cleanup"
+            echo
+            echo "## Upstream job results"
+            for job_name in "${!results[@]}"; do
+              echo "- ${job_name}: ${results[${job_name}]}"
+            done
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          for result in "${results[@]}"; do
+            case "${result}" in
+              success|skipped)
+                ;;
+              failure|cancelled)
+                failed=1
+                ;;
+              *)
+                echo "Unexpected upstream result: ${result}" >&2
+                failed=1
+                ;;
+            esac
+          done
+
+          if [ "${failed}" -ne 0 ]; then
+            {
+              echo
+              echo "## Outcome"
+              echo "- One or more upstream jobs failed or were cancelled."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            exit 1
+          fi
+
+          {
+            echo
+            echo "## Outcome"
+            echo "- All upstream jobs either succeeded or were intentionally skipped."
+          } >> "${GITHUB_STEP_SUMMARY}"

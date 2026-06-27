@@ -1,0 +1,36 @@
+{
+  "data": [
+    {
+      "entity": {
+        "id": "recipe:stillness:reflex",
+        "slug": "recipe-reflex-stillness",
+        "type": "recipe",
+        "name": "Reflex recipe",
+        "displayName": "Reflex recipe",
+        "environment": "stillness"
+      },
+      "facts": [
+        {
+          "key": "output_type_id",
+          "value": 80001,
+          "confidence": "probable",
+          "sourceId": "source:static-client:recipes:stillness"
+        }
+      ],
+      "relations": [
+        {
+          "predicate": "requires_input",
+          "objectEntityId": "item:stillness:type:77889",
+          "objectDisplayName": "Salvaged Materials"
+        }
+      ],
+      "incomingRelations": [],
+      "sourceIds": ["source:static-client:recipes:stillness"],
+      "derived": {}
+    }
+  ],
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}

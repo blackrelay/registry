@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "registry.export_manifest.v1",
+  "registry": "black-relay-registry",
+  "apiVersion": "v1",
+  "generatedAt": "2026-06-26T11:35:07Z",
+  "database": {
+    "engine": "postgres",
+    "identity": "blackrelay_registry"
+  },
+  "files": [
+    {
+      "path": "catalog.json",
+      "contentType": "application/json",
+      "sha256": "c3e30767cc458841f967a5c9a2d2e76cea305b6185214cd18fad140d767497ec",
+      "sizeBytes": 345,
+      "rowCount": 1
+    },
+    {
+      "path": "entities.jsonl",
+      "contentType": "application/x-ndjson",
+      "sha256": "ce65e4eb478b5bdc706a7adace0ee3bcf000b6e6055856789336870c8809b371",
+      "sizeBytes": 291804,
+      "rowCount": 1000
+    }
+  ],
+  "highWaterMarks": {
+    "entities": {
+      "rowCount": 1000,
+      "firstId": "assembly:stillness:1",
+      "lastId": "system:stillness:30001001"
+    }
+  }
+}

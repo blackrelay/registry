@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sui-objects.export.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "objectId", "environment", "typeRepr", "observedAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "objectId": { "type": "string", "minLength": 1 },
+    "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
+    "typeRepr": { "type": "string", "minLength": 1 },
+    "packageId": { "type": "string" },
+    "module": { "type": "string" },
+    "typeName": { "type": "string" },
+    "version": { "type": "string" },
+    "digest": { "type": "string" },
+    "sourceId": { "type": "string" },
+    "payload": { "type": "object" },
+    "observedAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,2672 @@
+openapi: 3.1.0
+info:
+  title: Black Relay Registry API
+  version: 0.1.0
+  description: Source-aware public EVE Frontier registry API for canonical world data, semantic killmails and operations state.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /v1/health:
+    get:
+      summary: Health Check
+      responses:
+        "200":
+          description: Registry process is serving.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthEnvelope"
+  /v1/ready:
+    get:
+      summary: Readiness Check
+      responses:
+        "200":
+          description: Database-backed Registry is ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyEnvelope"
+        "503":
+          $ref: "#/components/responses/Error"
+  /v1/metrics:
+    get:
+      summary: Prometheus-Style Metrics
+      responses:
+        "200":
+          description: Plain text metrics.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /v1/search:
+    get:
+      summary: Search Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/EntityType"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/TypeID"
+        - $ref: "#/components/parameters/GroupID"
+        - $ref: "#/components/parameters/CategoryID"
+        - $ref: "#/components/parameters/MarketGroupID"
+        - $ref: "#/components/parameters/WreckTypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/StaticEntityType"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Entity search results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/entities:
+    get:
+      summary: List Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/EntityType"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/TypeID"
+        - $ref: "#/components/parameters/GroupID"
+        - $ref: "#/components/parameters/CategoryID"
+        - $ref: "#/components/parameters/MarketGroupID"
+        - $ref: "#/components/parameters/WreckTypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/StaticEntityType"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/entities/{idOrSlug}:
+    get:
+      summary: Get an Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/entities/{idOrSlug}/facts:
+    get:
+      summary: List Source-Backed Facts for an Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Entity fact list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactListEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/entities/{idOrSlug}/relations:
+    get:
+      summary: List Relations Connected to an Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Entity relation list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RelationListEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/entities/{idOrSlug}/sources:
+    get:
+      summary: List Sources Used by an Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Entity source list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceListEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/entities/{idOrSlug}/history:
+    get:
+      summary: Get Entity Facts, Relations and Sources Together
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Entity history record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityHistoryEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/types:
+    get:
+      summary: List Static-Client Type Entities
+      description: Returns static-client-backed item, material, ship, structure and enemy type entities with exact fact filters.
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/EntityType"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/TypeID"
+        - $ref: "#/components/parameters/GroupID"
+        - $ref: "#/components/parameters/CategoryID"
+        - $ref: "#/components/parameters/MarketGroupID"
+        - $ref: "#/components/parameters/WreckTypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/StaticEntityType"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Static-client type entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/types/{typeID}:
+    get:
+      summary: Get a Static-Client Type Entity by Type ID
+      parameters:
+        - $ref: "#/components/parameters/TypeIDPath"
+        - $ref: "#/components/parameters/EntityType"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/GroupID"
+        - $ref: "#/components/parameters/CategoryID"
+        - $ref: "#/components/parameters/MarketGroupID"
+        - $ref: "#/components/parameters/WreckTypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/StaticEntityType"
+      responses:
+        "200":
+          description: Static-client type entity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/current/characters:
+    get:
+      summary: List Current Character State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Tribe"
+        - $ref: "#/components/parameters/ProfileState"
+        - $ref: "#/components/parameters/HasActivity"
+        - $ref: "#/components/parameters/HasTribe"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current character state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/tribes:
+    get:
+      summary: List Current Tribe State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/ProfileState"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current tribe state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/assemblies:
+    get:
+      summary: List Current Assembly State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Owner"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/OwnerCap"
+        - $ref: "#/components/parameters/LocationHash"
+        - $ref: "#/components/parameters/HasOwnerCap"
+        - $ref: "#/components/parameters/HasLocationHash"
+        - $ref: "#/components/parameters/HasResolvedOwner"
+        - $ref: "#/components/parameters/HasResolvedSystem"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current assembly state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/gates:
+    get:
+      summary: List Current Gate State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Owner"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/OwnerCap"
+        - $ref: "#/components/parameters/LocationHash"
+        - $ref: "#/components/parameters/HasOwnerCap"
+        - $ref: "#/components/parameters/HasLocationHash"
+        - $ref: "#/components/parameters/HasResolvedOwner"
+        - $ref: "#/components/parameters/HasResolvedSystem"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current gate state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/storage:
+    get:
+      summary: List Current Storage State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Owner"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/OwnerCap"
+        - $ref: "#/components/parameters/LocationHash"
+        - $ref: "#/components/parameters/HasOwnerCap"
+        - $ref: "#/components/parameters/HasLocationHash"
+        - $ref: "#/components/parameters/HasResolvedOwner"
+        - $ref: "#/components/parameters/HasResolvedSystem"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current storage state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/turrets:
+    get:
+      summary: List Current Turret State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Owner"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/OwnerCap"
+        - $ref: "#/components/parameters/LocationHash"
+        - $ref: "#/components/parameters/HasOwnerCap"
+        - $ref: "#/components/parameters/HasLocationHash"
+        - $ref: "#/components/parameters/HasResolvedOwner"
+        - $ref: "#/components/parameters/HasResolvedSystem"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current turret state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/regions:
+    get:
+      summary: List Current Region State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current region state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/constellations:
+    get:
+      summary: List Current Constellation State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current constellation state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/items:
+    get:
+      summary: List Current Item Type State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current item type state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/materials:
+    get:
+      summary: List Current Material Type State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current material type state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/enemies:
+    get:
+      summary: List Current Enemy Type State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current enemy type state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/recipes:
+    get:
+      summary: List Current Recipe State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current recipe state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/blueprints:
+    get:
+      summary: List Current Blueprint State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current blueprint state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/ships:
+    get:
+      summary: List Current Ship Type State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current ship type state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/structures:
+    get:
+      summary: List Current Structure Type State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current structure type state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/systems:
+    get:
+      summary: List Current System State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/ConnectedTo"
+        - $ref: "#/components/parameters/HasActivity"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current system state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/routes:
+    get:
+      summary: List Current Route State
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current route state records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentEntityListEnvelope"
+  /v1/current/ownership:
+    get:
+      summary: List Current Ownership Edges
+      parameters:
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current `owned_by` relation edges.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentRelationListEnvelope"
+  /v1/current/route-edges:
+    get:
+      summary: List Current Route and Gate-Link Edges
+      parameters:
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceID"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Current `links_to` and `observed_between` relation edges.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentRelationListEnvelope"
+  /v1/events:
+    get:
+      summary: List Indexed Source Events
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - name: cycle
+          in: query
+          description: Legacy singular cycle filter. Prefer `cycles` for current/default/archive scope.
+          schema:
+            type: integer
+            minimum: 1
+        - name: package_id
+          in: query
+          description: Sui package ID.
+          schema:
+            type: string
+        - name: module
+          in: query
+          description: Move module name.
+          schema:
+            type: string
+        - name: transaction_digest
+          in: query
+          description: Sui transaction digest.
+          schema:
+            type: string
+        - name: source_id
+          in: query
+          description: Registry source ID.
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Event page ordered by event time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventListEnvelope"
+  /v1/events/{id}:
+    get:
+      summary: Get an Indexed Source Event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/killmails:
+    get:
+      summary: List Semantic Killmails
+      parameters:
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/System"
+        - $ref: "#/components/parameters/Victim"
+        - $ref: "#/components/parameters/Killer"
+        - $ref: "#/components/parameters/KillerTypeID"
+        - $ref: "#/components/parameters/Reporter"
+        - $ref: "#/components/parameters/NPC"
+        - $ref: "#/components/parameters/FromTime"
+        - $ref: "#/components/parameters/ToTime"
+        - $ref: "#/components/parameters/ExcludeFixtures"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Semantic killmail page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KillmailListEnvelope"
+  /v1/killmails/{id}:
+    get:
+      summary: Get a Semantic Killmail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Semantic killmail record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KillmailEnvelope"
+              examples:
+                npcKillmail:
+                  $ref: "#/components/examples/NPCKillmail"
+                playerKillmail:
+                  $ref: "#/components/examples/PlayerKillmail"
+                unresolvedKillmail:
+                  $ref: "#/components/examples/UnresolvedKillmail"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/killmails/{id}/raw:
+    get:
+      summary: Get Raw Killmail Data
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Raw killmail record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RawKillmailEnvelope"
+  /v1/systems:
+    get:
+      summary: List System Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: System entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/systems/{idOrSlug}:
+    get:
+      summary: Get a System Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: System entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/characters:
+    get:
+      summary: List Character Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Character entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/characters/{idOrSlug}:
+    get:
+      summary: Get a Character Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Character entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/tribes:
+    get:
+      summary: List Tribe Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Tribe entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/tribes/{idOrSlug}:
+    get:
+      summary: Get a Tribe Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Tribe entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/assemblies:
+    get:
+      summary: List Assembly Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Assembly entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/assemblies/{idOrSlug}:
+    get:
+      summary: Get an Assembly Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Assembly entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/gates:
+    get:
+      summary: List Gate Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Gate entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/gates/{idOrSlug}:
+    get:
+      summary: Get a Gate Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Gate entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/regions:
+    get:
+      summary: List Region Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Region entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/regions/{idOrSlug}:
+    get:
+      summary: Get a Region Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Region entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/constellations:
+    get:
+      summary: List Constellation Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Constellation entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/constellations/{idOrSlug}:
+    get:
+      summary: Get a Constellation Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Constellation entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/items:
+    get:
+      summary: List Item Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Item entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/items/{idOrSlug}:
+    get:
+      summary: Get an Item Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Item entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/materials:
+    get:
+      summary: List Material Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Material entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/materials/{idOrSlug}:
+    get:
+      summary: Get a Material Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Material entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/enemies:
+    get:
+      summary: List Enemy Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/TypeID"
+        - $ref: "#/components/parameters/GroupID"
+        - $ref: "#/components/parameters/WreckTypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Enemy entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/enemies/{idOrSlug}:
+    get:
+      summary: Get an Enemy Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Enemy entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/recipes:
+    get:
+      summary: List Recipe Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Recipe entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/recipes/{idOrSlug}:
+    get:
+      summary: Get a Recipe Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Recipe entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/blueprints:
+    get:
+      summary: List Blueprint Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/TypeID"
+        - $ref: "#/components/parameters/SourceArtefactID"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Blueprint entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/blueprints/{idOrSlug}:
+    get:
+      summary: Get a Blueprint Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Blueprint entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/ships:
+    get:
+      summary: List Ship Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Ship entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/ships/{idOrSlug}:
+    get:
+      summary: Get a Ship Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Ship entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/structures:
+    get:
+      summary: List Structure Entities
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Environment"
+        - $ref: "#/components/parameters/Cycles"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Structure entity page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityListEnvelope"
+  /v1/structures/{idOrSlug}:
+    get:
+      summary: Get a Structure Entity
+      parameters:
+        - $ref: "#/components/parameters/IDOrSlug"
+      responses:
+        "200":
+          description: Structure entity record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityEnvelope"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/sources/{id}:
+    get:
+      summary: Get a Source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Source record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceEnvelope"
+  /v1/artefacts/{id}:
+    get:
+      summary: Get a Source Artefact
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Source artefact record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtefactEnvelope"
+              examples:
+                staticEnemyArtefact:
+                  $ref: "#/components/examples/StaticEnemyArtefact"
+  /v1/ops/freshness:
+    get:
+      summary: List Source Freshness
+      responses:
+        "200":
+          description: Freshness state for indexed sources.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FreshnessEnvelope"
+  /v1/ops/cursors:
+    get:
+      summary: List Sync Cursors
+      responses:
+        "200":
+          description: Cursor state for indexers and importers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CursorEnvelope"
+  /v1/ops/sui-coverage:
+    get:
+      summary: Summarise Sui Cursor Coverage
+      responses:
+        "200":
+          description: Sui cursor coverage state. This is cursor observability, not proof of complete historical chain coverage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuiCoverageEnvelope"
+  /v1/ops/source-gaps:
+    get:
+      summary: List Known Source and Resolver Gaps
+      parameters:
+        - $ref: "#/components/parameters/Environment"
+      responses:
+        "200":
+          description: Actionable evidence and resolver gaps that affect semantic completeness.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceGapListEnvelope"
+  /v1/admin/static-enemies/import:
+    post:
+      summary: Import Reviewed Static-Client Enemy Candidates
+      security:
+        - bearerAdmin: []
+        - cloudflareAccess: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [path]
+              properties:
+                path:
+                  type: string
+                environment:
+                  $ref: "#/components/schemas/Environment"
+      responses:
+        "201":
+          description: Import completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "401":
+          $ref: "#/components/responses/Error"
+  /v1/admin/imports:
+    post:
+      summary: Create a Local Review Entry for an Imported Target
+      security:
+        - bearerAdmin: []
+        - cloudflareAccess: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDraft"
+      responses:
+        "201":
+          description: Review entry created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewEnvelope"
+        "401":
+          $ref: "#/components/responses/Error"
+  /v1/admin/reviews:
+    get:
+      summary: List Local Review Entries
+      security:
+        - bearerAdmin: []
+        - cloudflareAccess: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReviewStatus"
+      responses:
+        "200":
+          description: Review entries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewListEnvelope"
+        "401":
+          $ref: "#/components/responses/Error"
+  /v1/admin/reviews/{id}/publish:
+    post:
+      summary: Publish a Local Review Entry
+      security:
+        - bearerAdmin: []
+        - cloudflareAccess: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewUpdate"
+      responses:
+        "200":
+          description: Review entry published.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewEnvelope"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+  /v1/admin/reviews/{id}/reject:
+    post:
+      summary: Reject a Local Review Entry
+      security:
+        - bearerAdmin: []
+        - cloudflareAccess: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewUpdate"
+      responses:
+        "200":
+          description: Review entry rejected.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewEnvelope"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearerAdmin:
+      type: http
+      scheme: bearer
+      description: Local development admin bearer token configured with `BR_REGISTRY_ADMIN_TOKEN`.
+    cloudflareAccess:
+      type: apiKey
+      in: header
+      name: Cf-Access-Jwt-Assertion
+      description: Cloudflare Access JWT. The Registry validates the RS256 signature, issuer and application AUD tag before allowing admin routes.
+  parameters:
+    Q:
+      name: q
+      in: query
+      schema:
+        type: string
+    EntityType:
+      name: type
+      in: query
+      schema:
+        $ref: "#/components/schemas/EntityType"
+    Environment:
+      name: environment
+      in: query
+      description: Registry environment. Omit to query Stillness.
+      schema:
+        $ref: "#/components/schemas/Environment"
+    Cycles:
+      name: cycles
+      in: query
+      description: Cycle scope for list queries. Omit for the current cycle plus unlabelled compatibility rows, use `current` for the strict current cycle, use `all` to include archive rows, or pass comma-separated cycle numbers such as `5,6`. Cycle 5 archive rows may have unresolved tribe profile names unless a Cycle 5 World API source artefact has been imported.
+      schema:
+        type: string
+        examples:
+          - current
+          - all
+          - "5,6"
+    TypeID:
+      name: type_id
+      in: query
+      description: Exact static-client `type_id` fact.
+      schema:
+        type: string
+    TypeIDPath:
+      name: typeID
+      in: path
+      required: true
+      description: Exact static-client type ID.
+      schema:
+        type: string
+    GroupID:
+      name: group_id
+      in: query
+      description: Exact static-client `group_id` fact.
+      schema:
+        type: string
+    CategoryID:
+      name: category_id
+      in: query
+      description: Exact static-client `category_id` fact.
+      schema:
+        type: string
+    MarketGroupID:
+      name: market_group_id
+      in: query
+      description: Exact static-client `market_group_id` fact.
+      schema:
+        type: string
+    WreckTypeID:
+      name: wreck_type_id
+      in: query
+      description: Exact static-client `wreck_type_id` fact.
+      schema:
+        type: string
+    SourceArtefactID:
+      name: source_artefact_id
+      in: query
+      description: Exact source artefact ID recorded on the type facts.
+      schema:
+        type: string
+    SourceID:
+      name: source_id
+      in: query
+      description: Exact contributing source ID recorded on the current-state facts or relation edge.
+      schema:
+        type: string
+    StaticEntityType:
+      name: static_entity_type
+      in: query
+      description: Exact normalised entity type derived from static-client type metadata.
+      schema:
+        $ref: "#/components/schemas/EntityType"
+    ProfileState:
+      name: profile
+      in: query
+      description: Filter current records by whether they have a sourced profile or only a generated placeholder display name.
+      schema:
+        type: string
+        enum: [known, placeholder]
+    Tribe:
+      name: tribe
+      in: query
+      description: Filter current records by `belongs_to` tribe entity id.
+      schema:
+        type: string
+    Owner:
+      name: owner
+      in: query
+      description: Filter current records by `owned_by` owner entity id.
+      schema:
+        type: string
+    OwnerCap:
+      name: owner_cap
+      in: query
+      description: Filter current infrastructure records by evidence-only `owner_cap_id`.
+      schema:
+        type: string
+    LocationHash:
+      name: location_hash
+      in: query
+      description: Filter current infrastructure records by evidence-only `location_hash`.
+      schema:
+        type: string
+    System:
+      name: system
+      in: query
+      description: Filter records connected to this system entity id.
+      schema:
+        type: string
+    ConnectedTo:
+      name: connected_to
+      in: query
+      description: Filter systems, gates or routes connected to this system entity id.
+      schema:
+        type: string
+    HasActivity:
+      name: has_activity
+      in: query
+      description: Filter current records by whether public activity relations exist.
+      schema:
+        type: boolean
+    HasTribe:
+      name: has_tribe
+      in: query
+      description: Filter current records by whether a derived tribe relation exists.
+      schema:
+        type: boolean
+    HasOwnerCap:
+      name: has_owner_cap
+      in: query
+      description: Filter current infrastructure records by whether owner-capability evidence exists.
+      schema:
+        type: boolean
+    HasLocationHash:
+      name: has_location_hash
+      in: query
+      description: Filter current infrastructure records by whether location-hash evidence exists.
+      schema:
+        type: boolean
+    HasResolvedOwner:
+      name: has_resolved_owner
+      in: query
+      description: Filter current infrastructure records by whether owner evidence has been resolved to an `owned_by` relation.
+      schema:
+        type: boolean
+    HasResolvedSystem:
+      name: has_resolved_system
+      in: query
+      description: Filter current infrastructure records by whether location evidence has been resolved to a system relation.
+      schema:
+        type: boolean
+    Victim:
+      name: victim
+      in: query
+      description: Filter killmails by victim character entity id.
+      schema:
+        type: string
+    Killer:
+      name: killer
+      in: query
+      description: Filter killmails by killer character or enemy entity id.
+      schema:
+        type: string
+    KillerTypeID:
+      name: killer_type_id
+      in: query
+      description: Filter killmails by explicit NPC/static type id. Raw killer_id values are not treated as static NPC type ids.
+      schema:
+        type: string
+    Reporter:
+      name: reporter
+      in: query
+      description: Filter killmails by reporter character entity id.
+      schema:
+        type: string
+    NPC:
+      name: npc
+      in: query
+      description: When true, return NPC/enemy killmails with an explicit killer type id or sourced enemy killer relation; when false, return player-character killmails.
+      schema:
+        type: boolean
+    ExcludeFixtures:
+      name: exclude_fixtures
+      in: query
+      description: Exclude local fixture/proof killmails from list results. Raw fixture records remain available by id.
+      schema:
+        type: boolean
+    FromTime:
+      name: from
+      in: query
+      description: Inclusive lower bound for killmail `occurredAt`.
+      schema:
+        type: string
+        format: date-time
+    ToTime:
+      name: to
+      in: query
+      description: Inclusive upper bound for killmail `occurredAt`.
+      schema:
+        type: string
+        format: date-time
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        $ref: "#/components/schemas/Cursor"
+    IDOrSlug:
+      name: idOrSlug
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Structured error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    Meta:
+      type: object
+      additionalProperties: false
+      required: [registry, apiVersion]
+      properties:
+        registry:
+          type: string
+          minLength: 1
+          description: Registry instance identifier. Black Relay deployments use `black-relay-registry`; other operators should configure their own stable id.
+          example: black-relay-registry
+        apiVersion:
+          type: string
+          minLength: 1
+          description: Public API version emitted by this instance.
+          example: v1
+    Cursor:
+      type: string
+      description: Opaque base64url keyset cursor.
+    Environment:
+      type: string
+      enum: [stillness, utopia, unknown]
+    SourceKind:
+      type: string
+      enum: [onchain, sui_event, sui_object, world_api, datahub, static_client_data, reverse_engineered, observed_gameplay, community_report, manual_inference]
+    Confidence:
+      type: string
+      enum: [verified, probable, reported, stale, unknown]
+    ReviewStatus:
+      type: string
+      enum: [candidate, reviewed, published, rejected, superseded]
+    Freshness:
+      type: string
+      enum: [live_indexed, cached_snapshot, static_cycle_data, cycle_archive, manual_observation, unknown]
+    EntityType:
+      type: string
+      enum: [character, player, tribe, alliance, item, material, recipe, blueprint, ship, structure, assembly, gate, storage, market, turret, system, region, constellation, site, resource_object, enemy, killmail, event, route, unknown]
+    Entity:
+      type: object
+      additionalProperties: false
+      required: [id, slug, entityType, name, environment]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        entityType:
+          $ref: "#/components/schemas/EntityType"
+        name:
+          type: string
+        displayName:
+          type: string
+        summary:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        cycle:
+          type: integer
+          minimum: 1
+        updatedAt:
+          type: string
+          format: date-time
+    Fact:
+      type: object
+      additionalProperties: false
+      required: [entityId, key, value, sourceId, confidence, environment, reviewStatus]
+      properties:
+        entityId:
+          type: string
+        key:
+          type: string
+        value: {}
+        sourceId:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        environment:
+          $ref: "#/components/schemas/Environment"
+        cycle:
+          type: integer
+          minimum: 1
+        reviewStatus:
+          $ref: "#/components/schemas/ReviewStatus"
+        importId:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+    Relation:
+      type: object
+      additionalProperties: false
+      required: [subjectEntityId, predicate, objectEntityId, sourceId, confidence, environment]
+      properties:
+        subjectEntityId:
+          type: string
+        predicate:
+          type: string
+        objectEntityId:
+          type: string
+        sourceId:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        environment:
+          $ref: "#/components/schemas/Environment"
+    CurrentRelation:
+      type: object
+      additionalProperties: false
+      required: [subjectEntityId, predicate, objectEntityId, sourceId, confidence, environment]
+      properties:
+        id:
+          type: string
+        subjectEntityId:
+          type: string
+        subjectEntityType:
+          $ref: "#/components/schemas/EntityType"
+        subjectDisplayName:
+          type: string
+        predicate:
+          type: string
+        objectEntityId:
+          type: string
+        objectEntityType:
+          $ref: "#/components/schemas/EntityType"
+        objectDisplayName:
+          type: string
+        sourceId:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        environment:
+          $ref: "#/components/schemas/Environment"
+        createdAt:
+          type: string
+          format: date-time
+    CurrentRelatedEntity:
+      type: object
+      additionalProperties: false
+      required: [entityId]
+      properties:
+        entityId:
+          type: string
+        entityType:
+          $ref: "#/components/schemas/EntityType"
+        displayName:
+          type: string
+    CurrentProfile:
+      type: object
+      additionalProperties: false
+      properties:
+        metadataName:
+          type: string
+        metadataDescription:
+          type: string
+        metadataUrl:
+          type: string
+        tag:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+    CurrentDerived:
+      type: object
+      additionalProperties: false
+      properties:
+        profile:
+          $ref: "#/components/schemas/CurrentProfile"
+        tribe:
+          $ref: "#/components/schemas/CurrentRelatedEntity"
+        owner:
+          $ref: "#/components/schemas/CurrentRelatedEntity"
+        system:
+          $ref: "#/components/schemas/CurrentRelatedEntity"
+        ownerCap:
+          $ref: "#/components/schemas/CurrentRelatedEntity"
+        locationHash:
+          $ref: "#/components/schemas/CurrentRelatedEntity"
+        memberCount:
+          type: integer
+          minimum: 0
+        ownedObjectCount:
+          type: integer
+          minimum: 0
+        connectedSystemCount:
+          type: integer
+          minimum: 0
+        routeEdgeCount:
+          type: integer
+          minimum: 0
+        killmailCount:
+          type: integer
+          minimum: 0
+        publicActivityCount:
+          type: integer
+          minimum: 0
+    CurrentEntity:
+      type: object
+      additionalProperties: false
+      required: [entity, facts]
+      properties:
+        entity:
+          $ref: "#/components/schemas/Entity"
+        facts:
+          type: object
+          additionalProperties: true
+        outgoingRelations:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentRelation"
+        incomingRelations:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentRelation"
+        sourceIds:
+          type: array
+          items:
+            type: string
+        derived:
+          $ref: "#/components/schemas/CurrentDerived"
+    Review:
+      type: object
+      additionalProperties: false
+      required: [id, targetKind, targetId, reviewStatus]
+      properties:
+        id:
+          type: string
+        targetKind:
+          type: string
+        targetId:
+          type: string
+        reviewStatus:
+          $ref: "#/components/schemas/ReviewStatus"
+        reviewer:
+          type: string
+        notes:
+          type: string
+        reviewedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    ReviewDraft:
+      type: object
+      additionalProperties: false
+      required: [targetKind, targetId]
+      properties:
+        targetKind:
+          type: string
+        targetId:
+          type: string
+        notes:
+          type: string
+    ReviewUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        reviewer:
+          type: string
+        notes:
+          type: string
+    Source:
+      type: object
+      additionalProperties: false
+      required: [id, kind, title, locator]
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: "#/components/schemas/SourceKind"
+        title:
+          type: string
+        locator:
+          type: string
+        url:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        cycle:
+          type: integer
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+    Artefact:
+      type: object
+      additionalProperties: false
+      required: [id, sourceId, sourceKind, kind, artefactKind, environment, pathOrUri, sha256, sizeBytes, contentType, extractedAt, importerName, importerVersion, reviewStatus]
+      properties:
+        id:
+          type: string
+        sourceId:
+          type: string
+        sourceKind:
+          $ref: "#/components/schemas/SourceKind"
+        kind:
+          type: string
+        artefactKind:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        pathOrUri:
+          type: string
+        sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        sizeBytes:
+          type: integer
+          minimum: 0
+        rowCount:
+          type: integer
+          minimum: 0
+        contentType:
+          type: string
+        extractedAt:
+          type: string
+          format: date-time
+        importerName:
+          type: string
+        importerVersion:
+          type: string
+        clientBuild:
+          type: string
+        patchLabel:
+          type: string
+        cycle:
+          type: integer
+        reviewStatus:
+          $ref: "#/components/schemas/ReviewStatus"
+        supersededByArtefactId:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ResolvedValue:
+      type: object
+      additionalProperties: false
+      required: [entityType, displayName, confidence]
+      properties:
+        entityId:
+          type: string
+        entityType:
+          $ref: "#/components/schemas/EntityType"
+        rawId:
+          type: string
+        displayName:
+          type: string
+        typeId:
+          type: string
+        isNpc:
+          type: boolean
+        confidence:
+          $ref: "#/components/schemas/Confidence"
+        sourceIds:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    SemanticKillmail:
+      type: object
+      additionalProperties: false
+      required: [id, kind, occurredAt, system, victim, killer, reporter]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          const: killmail
+        occurredAt:
+          type: string
+          format: date-time
+        system:
+          $ref: "#/components/schemas/ResolvedValue"
+        victim:
+          $ref: "#/components/schemas/ResolvedValue"
+        killer:
+          $ref: "#/components/schemas/ResolvedValue"
+        reporter:
+          $ref: "#/components/schemas/ResolvedValue"
+        lossType:
+          type: string
+        summaryText:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+    RawKillmail:
+      type: object
+      additionalProperties: false
+      required: [id, environment, occurredAt, sourceIds]
+      properties:
+        id:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        occurredAt:
+          type: string
+          format: date-time
+        systemId:
+          type: string
+        systemName:
+          type: string
+        victimCharacterId:
+          type: string
+        victimName:
+          type: string
+        killerCharacterId:
+          type: string
+        killerName:
+          type: string
+        killerTypeId:
+          type: string
+        reporterCharacterId:
+          type: string
+        reporterName:
+          type: string
+        lossType:
+          type: string
+        sourceIds:
+          type: array
+          items:
+            type: string
+        raw:
+          type: object
+          additionalProperties: true
+    Event:
+      type: object
+      additionalProperties: false
+      required: [id, kind, environment, occurredAt, payload]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        occurredAt:
+          type: string
+          format: date-time
+        cycle:
+          type: integer
+          minimum: 1
+        packageId:
+          type: string
+        module:
+          type: string
+        transactionDigest:
+          type: string
+        checkpoint:
+          type: string
+        sourceId:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+    CursorStatus:
+      type: object
+      additionalProperties: false
+      required: [id, source, environment, cursorValue, cursorKind, eventsProcessed, errorCount, updatedAt]
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        cursorValue:
+          type: string
+        cursorKind:
+          type: string
+        lastSuccessfulIngest:
+          type: string
+          format: date-time
+        lastCheckpoint:
+          type: string
+        eventsProcessed:
+          type: integer
+        errorCount:
+          type: integer
+        lastErrorSummary:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    SourceGap:
+      type: object
+      additionalProperties: false
+      required: [id, kind, category, severity, count, summary, recommendedAction]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [ownership_evidence_only, location_evidence_only, unresolved_killmail_actors, sui_object_provider_range_blocked, static_client_recipes, static_client_full_table_decoder]
+        category:
+          type: string
+          enum: [resolver_missing, provider_blocked, static_data_missing, decoder_review_required]
+        severity:
+          type: string
+          enum: [none, info, actionable]
+        environment:
+          $ref: "#/components/schemas/Environment"
+        count:
+          type: integer
+          minimum: 0
+        summary:
+          type: string
+        recommendedAction:
+          type: string
+        suggestedCommands:
+          type: array
+          items:
+            type: string
+    CoverageStatus:
+      type: string
+      enum: [indexed, errored, limited, not_seen, range_blocked]
+    SuiCoverageTarget:
+      type: object
+      additionalProperties: false
+      required: [kind, status, cursorId, source, rowsProcessed, errorCount]
+      properties:
+        kind:
+          type: string
+          enum: [event, object, derivation, cursor]
+        status:
+          $ref: "#/components/schemas/CoverageStatus"
+        cursorId:
+          type: string
+        source:
+          type: string
+        cursorKind:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        network:
+          type: string
+        packageName:
+          type: string
+        packageId:
+          type: string
+        role:
+          type: string
+          enum: [original, published, explicit]
+        moduleName:
+          type: string
+        eventType:
+          type: string
+        typeName:
+          type: string
+        typeRepr:
+          type: string
+        checkpointAfter:
+          type: integer
+        checkpointBefore:
+          type: integer
+        rowsProcessed:
+          type: integer
+        lastSuccessfulIngest:
+          type: string
+          format: date-time
+        lastCheckpoint:
+          type: string
+        errorCount:
+          type: integer
+        lastErrorSummary:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        missingCursor:
+          type: boolean
+        emptyStream:
+          type: boolean
+        limitedByMaxPages:
+          type: boolean
+        providerRangeBlocked:
+          type: boolean
+    SuiCoverageSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - coverageBasis
+        - fullCoverageProven
+        - targetCount
+        - eventTargets
+        - objectTargets
+        - derivationTargets
+        - indexedTargets
+        - erroredTargets
+        - limitedTargets
+        - notSeenTargets
+        - rangeBlockedTargets
+        - rowsProcessed
+        - targets
+      properties:
+        environment:
+          $ref: "#/components/schemas/Environment"
+        network:
+          type: string
+        coverageBasis:
+          type: string
+          enum: [cursor_table, manifest_cursor_audit]
+        fullCoverageProven:
+          type: boolean
+          description: False unless a stronger completion proof exists beyond cursor presence.
+        targetCount:
+          type: integer
+        eventTargets:
+          type: integer
+        objectTargets:
+          type: integer
+        derivationTargets:
+          type: integer
+        indexedTargets:
+          type: integer
+        erroredTargets:
+          type: integer
+        limitedTargets:
+          type: integer
+        notSeenTargets:
+          type: integer
+        rangeBlockedTargets:
+          type: integer
+        rowsProcessed:
+          type: integer
+        lastSuccessfulIngest:
+          type: string
+          format: date-time
+        targets:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuiCoverageTarget"
+        warnings:
+          type: array
+          items:
+            type: string
+    FreshnessStatus:
+      type: object
+      additionalProperties: false
+      required: [source, environment, eventsProcessed, errorCount, stalenessStatus, updatedAt]
+      properties:
+        source:
+          type: string
+        environment:
+          $ref: "#/components/schemas/Environment"
+        lastSuccessfulIngest:
+          type: string
+          format: date-time
+        lastCheckpoint:
+          type: string
+        eventsProcessed:
+          type: integer
+        errorCount:
+          type: integer
+        lastErrorSummary:
+          type: string
+        stalenessStatus:
+          $ref: "#/components/schemas/Freshness"
+        updatedAt:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error, meta]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+        meta:
+          $ref: "#/components/schemas/Meta"
+    HealthEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [status, time]
+          properties:
+            status:
+              type: string
+              const: ok
+            time:
+              type: string
+              format: date-time
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ReadyEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [status]
+          properties:
+            status:
+              type: string
+              const: ready
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EntityEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Entity"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EntityListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Entity"
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SourceEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Source"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SourceListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Source"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    FactListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fact"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    RelationListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Relation"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EntityHistory:
+      type: object
+      additionalProperties: false
+      required: [entity, facts, relations, sources]
+      properties:
+        entity:
+          $ref: "#/components/schemas/Entity"
+        facts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fact"
+        relations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Relation"
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/Source"
+    EntityHistoryEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/EntityHistory"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    CurrentEntityListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentEntity"
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    CurrentRelationListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentRelation"
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ArtefactEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Artefact"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EventEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Event"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    EventListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    KillmailEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SemanticKillmail"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    KillmailListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SemanticKillmail"
+        nextCursor:
+          $ref: "#/components/schemas/Cursor"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    RawKillmailEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/RawKillmail"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    FreshnessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FreshnessStatus"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    CursorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CursorStatus"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SuiCoverageEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/SuiCoverageSummary"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SourceGapListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceGap"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ReviewEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: "#/components/schemas/Review"
+        meta:
+          $ref: "#/components/schemas/Meta"
+    ReviewListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        meta:
+          $ref: "#/components/schemas/Meta"
+  examples:
+    NPCKillmail:
+      value:
+        data:
+          id: killmail:stillness:fixture:caird
+          kind: killmail
+          occurredAt: "2026-06-24T10:00:00Z"
+          system:
+            entityId: system:stillness:nn0-y-d5
+            entityType: system
+            displayName: NN0-Y-D5
+            confidence: verified
+            sourceIds: [source:fixture:system]
+          victim:
+            entityId: character:stillness:fixture-victim
+            entityType: character
+            displayName: Fixture Victim
+            confidence: verified
+            sourceIds: [source:fixture:character]
+          killer:
+            entityId: enemy:stillness:type:92096
+            entityType: enemy
+            displayName: Caird [NPC]
+            typeId: "92096"
+            isNpc: true
+            confidence: probable
+            sourceIds: [source:static-client:stillness:reviewed-enemies]
+          reporter:
+            entityId: character:stillness:fixture-reporter
+            entityType: character
+            displayName: Fixture Reporter
+            confidence: verified
+            sourceIds: [source:fixture:character]
+          lossType: ship_destroyed
+          summaryText: Caird [NPC] killed Fixture Victim
+          sources: [source:fixture:killmail]
+          warnings: []
+        meta:
+          registry: black-relay-registry
+          apiVersion: v1
+    PlayerKillmail:
+      value:
+        data:
+          id: killmail:stillness:fixture:player
+          kind: killmail
+          occurredAt: "2026-06-24T10:05:00Z"
+          system:
+            entityId: system:stillness:nn0-y-d5
+            entityType: system
+            displayName: NN0-Y-D5
+            confidence: verified
+          victim:
+            entityId: character:stillness:alice
+            entityType: character
+            displayName: Alice
+            confidence: verified
+          killer:
+            entityId: character:stillness:bob
+            entityType: character
+            displayName: Bob
+            confidence: verified
+          reporter:
+            entityId: character:stillness:reporter
+            entityType: character
+            displayName: Reporter
+            confidence: verified
+          sources: [source:sui-event:killmail]
+        meta:
+          registry: black-relay-registry
+          apiVersion: v1
+    UnresolvedKillmail:
+      value:
+        data:
+          id: killmail:stillness:fixture:unresolved
+          kind: killmail
+          occurredAt: "2026-06-24T10:10:00Z"
+          system:
+            entityType: system
+            rawId: unknown
+            displayName: unknown
+            confidence: unknown
+            warnings: [system could not be resolved]
+          victim:
+            entityType: unknown
+            displayName: Unknown
+            confidence: unknown
+          killer:
+            entityType: unknown
+            rawId: "999999"
+            displayName: Unknown
+            confidence: unknown
+            warnings: [killer could not be resolved]
+          reporter:
+            entityType: unknown
+            displayName: Unknown
+            confidence: unknown
+          warnings: [killer could not be resolved]
+        meta:
+          registry: black-relay-registry
+          apiVersion: v1
+    StaticEnemyArtefact:
+      value:
+        data:
+          id: artefact:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          sourceId: source:static-client:stillness:reviewed-enemies
+          sourceKind: static_client_data
+          kind: static_enemy_candidates
+          artefactKind: static_enemy_candidates
+          environment: stillness
+          pathOrUri: artefacts/aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json
+          sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          sizeBytes: 4096
+          rowCount: 26
+          contentType: application/json
+          extractedAt: "2026-06-25T12:00:00Z"
+          importerName: br-import-static-enemies
+          importerVersion: 0.1.0
+          reviewStatus: reviewed
+        meta:
+          registry: black-relay-registry
+          apiVersion: v1

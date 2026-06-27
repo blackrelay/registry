@@ -1,0 +1,39 @@
+{
+  "data": {
+    "id": "killmail:stillness:unresolved:example",
+    "kind": "killmail",
+    "occurredAt": "2026-06-25T10:30:00Z",
+    "system": {
+      "entityType": "unknown",
+      "displayName": "Unknown",
+      "confidence": "unknown",
+      "warnings": ["system could not be resolved"]
+    },
+    "victim": {
+      "entityType": "unknown",
+      "displayName": "Unknown",
+      "confidence": "unknown",
+      "warnings": ["victim could not be resolved"]
+    },
+    "killer": {
+      "entityType": "unknown",
+      "rawId": "0xraw-killer",
+      "displayName": "Unknown",
+      "confidence": "unknown",
+      "warnings": ["killer could not be resolved"]
+    },
+    "reporter": {
+      "entityType": "unknown",
+      "displayName": "Unknown",
+      "confidence": "unknown",
+      "warnings": ["reporter could not be resolved"]
+    },
+    "sources": ["source:sui:sui-testnet:graphql"],
+    "warnings": ["killer could not be resolved"],
+    "summaryText": "Unknown killed Unknown."
+  },
+  "meta": {
+    "registry": "black-relay-registry",
+    "apiVersion": "v1"
+  }
+}
