@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/blackrelay/registry/internal/artefacts"
@@ -94,11 +93,7 @@ func ImportStaticEnemies(ctx context.Context, store StaticEnemyStore, artefactSt
 	if artefactStore == nil {
 		return StaticEnemyResult{}, errors.New("artefact store is required")
 	}
-	resolvedCandidatePath, err := artefacts.ResolveLocalInput(candidatePath, opts.AllowedRootDirs)
-	if err != nil {
-		return StaticEnemyResult{}, err
-	}
-	data, err := os.ReadFile(resolvedCandidatePath)
+	data, input, err := artefacts.ReadLocalInput(candidatePath, opts.AllowedRootDirs)
 	if err != nil {
 		return StaticEnemyResult{}, err
 	}
@@ -117,7 +112,7 @@ func ImportStaticEnemies(ctx context.Context, store StaticEnemyStore, artefactSt
 		ID:          StaticEnemySourceID,
 		Kind:        model.SourceKindStaticClientData,
 		Title:       nonEmpty(opts.SourceTitle, "Reviewed Stillness static-client enemy candidates"),
-		Locator:     resolvedCandidatePath,
+		Locator:     input.Path,
 		Environment: environment,
 		Cycle:       opts.Cycle,
 		Metadata: map[string]any{
@@ -126,7 +121,7 @@ func ImportStaticEnemies(ctx context.Context, store StaticEnemyStore, artefactSt
 		},
 		CreatedAt: time.Now().UTC(),
 	}
-	artefact, err := artefactStore.RegisterFile(ctx, resolvedCandidatePath, artefacts.RegisterMeta{
+	artefact, err := artefactStore.RegisterFile(ctx, candidatePath, artefacts.RegisterMeta{
 		SourceID:        source.ID,
 		Kind:            "static_enemy_candidates",
 		Environment:     environment,
