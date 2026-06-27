@@ -46,6 +46,27 @@ func TestImportStaticEnemiesPromotesReviewedArtefactBackedCandidates(t *testing.
 	}
 }
 
+func TestImportStaticEnemiesRejectsPathOutsideAllowedRoots(t *testing.T) {
+	store := db.NewMemoryStore()
+	allowed := t.TempDir()
+	other := t.TempDir()
+	fixture := filepath.Join(other, "static-enemies.reviewed.json")
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "fixtures", "static-enemies.reviewed.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(fixture, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = ImportStaticEnemies(context.Background(), store, artefacts.LocalStore{Root: filepath.Join(allowed, "artefacts")}, fixture, StaticEnemyOptions{
+		Environment:     model.EnvironmentStillness,
+		AllowedRootDirs: []string{allowed},
+	})
+	if err == nil {
+		t.Fatal("ImportStaticEnemies accepted a path outside the allowed roots")
+	}
+}
+
 func TestImportTribeIdentitiesPromotesReviewedArtefactBackedNames(t *testing.T) {
 	store := db.NewMemoryStore()
 	dir := t.TempDir()

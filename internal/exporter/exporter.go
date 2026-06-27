@@ -211,7 +211,6 @@ func writeSourceExport(ctx context.Context, store Store, path string, options Ex
 	if err != nil {
 		return collectionExport{}, err
 	}
-	defer file.Close()
 	encoder := json.NewEncoder(file)
 	cursor := ""
 	progress := newCollectionExport("created_at DESC, id DESC")
@@ -227,11 +226,11 @@ func writeSourceExport(ctx context.Context, store Store, path string, options Ex
 			Cursor:          cursor,
 		})
 		if err != nil {
-			return progress, err
+			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
 			if err := encoder.Encode(item); err != nil {
-				return progress, err
+				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.CreatedAt)
 		}
@@ -242,7 +241,7 @@ func writeSourceExport(ctx context.Context, store Store, path string, options Ex
 		}
 		cursor = page.NextCursor
 	}
-	return progress, nil
+	return closeCollectionExport(file, progress, nil)
 }
 
 func writeEntityExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
@@ -250,7 +249,6 @@ func writeEntityExport(ctx context.Context, store Store, path string, options Ex
 	if err != nil {
 		return collectionExport{}, err
 	}
-	defer file.Close()
 	encoder := json.NewEncoder(file)
 	cursor := ""
 	progress := newCollectionExport("updated_at DESC, id DESC")
@@ -266,11 +264,11 @@ func writeEntityExport(ctx context.Context, store Store, path string, options Ex
 			Cursor:          cursor,
 		})
 		if err != nil {
-			return progress, err
+			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
 			if err := encoder.Encode(item); err != nil {
-				return progress, err
+				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.UpdatedAt)
 		}
@@ -281,7 +279,7 @@ func writeEntityExport(ctx context.Context, store Store, path string, options Ex
 		}
 		cursor = page.NextCursor
 	}
-	return progress, nil
+	return closeCollectionExport(file, progress, nil)
 }
 
 func writeKillmailExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
@@ -289,7 +287,6 @@ func writeKillmailExport(ctx context.Context, store Store, path string, options 
 	if err != nil {
 		return collectionExport{}, err
 	}
-	defer file.Close()
 	encoder := json.NewEncoder(file)
 	cursor := ""
 	progress := newCollectionExport("occurred_at DESC, id DESC")
@@ -305,11 +302,11 @@ func writeKillmailExport(ctx context.Context, store Store, path string, options 
 			Cursor:          cursor,
 		})
 		if err != nil {
-			return progress, err
+			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range items {
 			if err := encoder.Encode(item); err != nil {
-				return progress, err
+				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.OccurredAt)
 		}
@@ -320,7 +317,7 @@ func writeKillmailExport(ctx context.Context, store Store, path string, options 
 		}
 		cursor = nextCursor
 	}
-	return progress, nil
+	return closeCollectionExport(file, progress, nil)
 }
 
 func writeEventExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
@@ -328,7 +325,6 @@ func writeEventExport(ctx context.Context, store Store, path string, options Exp
 	if err != nil {
 		return collectionExport{}, err
 	}
-	defer file.Close()
 	encoder := json.NewEncoder(file)
 	cursor := ""
 	progress := newCollectionExport("occurred_at DESC, id DESC")
@@ -344,11 +340,11 @@ func writeEventExport(ctx context.Context, store Store, path string, options Exp
 			Cursor:          cursor,
 		})
 		if err != nil {
-			return progress, err
+			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
 			if err := encoder.Encode(item); err != nil {
-				return progress, err
+				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.OccurredAt)
 		}
@@ -359,7 +355,7 @@ func writeEventExport(ctx context.Context, store Store, path string, options Exp
 		}
 		cursor = page.NextCursor
 	}
-	return progress, nil
+	return closeCollectionExport(file, progress, nil)
 }
 
 func writeSuiObjectExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
@@ -367,7 +363,6 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 	if err != nil {
 		return collectionExport{}, err
 	}
-	defer file.Close()
 	encoder := json.NewEncoder(file)
 	cursor := ""
 	progress := newCollectionExport("observed_at ASC, id ASC")
@@ -383,11 +378,11 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 			Cursor:          cursor,
 		})
 		if err != nil {
-			return progress, err
+			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
 			if err := encoder.Encode(item); err != nil {
-				return progress, err
+				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.ObservedAt)
 		}
@@ -398,7 +393,7 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 		}
 		cursor = page.NextCursor
 	}
-	return progress, nil
+	return closeCollectionExport(file, progress, nil)
 }
 
 func nextPageSize(limit, pageSize, count int) int {
@@ -423,10 +418,23 @@ func writeJSON(path string, value any) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(value); err != nil {
-		_ = file.Close()
-		return err
+		return closeFile(file, err)
 	}
-	return file.Close()
+	return closeFile(file, nil)
+}
+
+func closeCollectionExport(file *os.File, progress collectionExport, err error) (collectionExport, error) {
+	if closeErr := file.Close(); err == nil && closeErr != nil {
+		return progress, closeErr
+	}
+	return progress, err
+}
+
+func closeFile(file *os.File, err error) error {
+	if closeErr := file.Close(); err == nil && closeErr != nil {
+		return closeErr
+	}
+	return err
 }
 
 func newCollectionExport(order string) collectionExport {
