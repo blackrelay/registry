@@ -7,7 +7,7 @@ Black Relay Registry is built so another operator can run the same data spine wi
 - PostgreSQL.
 - A local artefact root.
 - Optional Docker Compose, Podman Compose or an existing PostgreSQL service.
-- Optional local EVE Frontier static-client files when importing reviewed static evidence.
+- Optional local EVE Frontier static-client files when decoding static resources and importing reviewed static records.
 
 Do not put wallet seeds, private keys, mnemonics, game credentials, Discord exports or private tribe intelligence in the Registry. Import public source evidence only.
 
@@ -47,7 +47,7 @@ curl -fsS http://127.0.0.1:8080/v1/health
 curl -fsS http://127.0.0.1:8080/v1/killmails/killmail:stillness:fixture:caird
 ```
 
-## Static-Client Evidence
+## Static-Client Decode Evidence
 
 When you have local client files, record deterministic native evidence before importing reviewed rows:
 ```sh
@@ -82,7 +82,7 @@ go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-Use World API snapshots for tribe and system metadata when available. Use static-client imports for universe data, enemies, type rows and reviewed recipes. Broad Sui object scans are enrichment evidence for deployments that can query the provider window reliably.
+Use World API snapshots for tribe and system metadata when available. Use native static-client decoder artefacts for universe data, enemies, type rows and reviewed recipes. Broad Sui object scans are enrichment evidence for deployments that can query the provider window reliably.
 
 ## Public Exports
 

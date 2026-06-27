@@ -13,7 +13,7 @@
 
 </div>
 
-Black Relay Registry is a source-aware public EVE Frontier world-data registry. It ingests public chain data, public metadata and reviewed static-client evidence then exposes normalised entities, semantic killmails, source artefacts, sync cursors and freshness state through a Go API backed by PostgreSQL.
+Black Relay Registry is a source-aware public EVE Frontier world-data registry. It ingests public chain data, public metadata and Registry-owned static-client decoder artefacts then exposes normalised entities, semantic killmails, source artefacts, sync cursors and freshness state through a Go API backed by PostgreSQL.
 
 Black Relay Registry is an unofficial EVE Frontier community project. EVE Frontier and related marks belong to their respective owners.
 Sections:
@@ -35,7 +35,7 @@ Current implemented surfaces:
 - Go API, importer and indexer commands.
 - PostgreSQL canonical registry schema and migrations.
 - Source artefact registry with SHA-256 evidence.
-- Reviewed static-client imports for enemies, universe rows, type rows and recipe evidence.
+- Native Go static-client decoders for universe, type and production resources with reviewed promotion paths for enemies, types and recipes.
 - Sui GraphQL event and object backfill with cursor resume.
 - Conservative event/object derivation for characters, tribes, systems, assemblies, gates, storage, turrets, killmails and route relations.
 - Resolver and semantic killmail output for player, enemy and unresolved actors.
@@ -177,7 +177,9 @@ go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 ```
 
-Import static-client evidence:
+Decode and import local static-client evidence.
+
+Registry includes native Go decoders for local EVE Frontier static-client resources. The decode commands read the local client resource index, hash the source resources, write deterministic evidence artefacts and leave promotion to reviewed import commands.
 ```sh
 go run ./cmd/br-import static-client-inspect-types -client-path "/path/to/eve-frontier/stillness"
 go run ./cmd/br-import static-client-decode-types -client-path "/path/to/eve-frontier/stillness" -out ./tmp/static-client-types.native-decode.json
@@ -335,7 +337,7 @@ Main references:
 - [API](docs/api.md): endpoint behaviour and response shapes.
 - [Architecture](docs/architecture.md): data model and ingestion flow.
 - [Source Policy](docs/source-policy.md): source, confidence, privacy and review rules.
-- [Static Client Import](docs/static-client-import.md): static-client evidence import and native decode flow.
+- [Static Client Import](docs/static-client-import.md): native static-client decode flow, artefact evidence and reviewed imports.
 - [Snapshot JSONL](docs/snapshots-jsonl.md): content-addressed JSONL artefact handling.
 - [Cloudflare Distribution](docs/cloudflare.md): R2/export publication model.
 - [Run Your Own Registry](docs/run-your-own-registry.md): operator bootstrap with custom database and artefact paths.

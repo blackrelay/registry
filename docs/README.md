@@ -11,7 +11,7 @@ This directory contains the working documentation for Black Relay Registry.
 
 ## Source And Import Guides
 - [Source Policy](source-policy.md): source kinds, confidence labels, review rules and privacy boundaries.
-- [Static Client Import](static-client-import.md): static-client evidence extraction, native decode flow and reviewed imports.
+- [Static Client Import](static-client-import.md): native static-client decode flow, artefact evidence and reviewed imports.
 - [Snapshot JSONL](snapshots-jsonl.md): content-addressed JSONL artefacts, semantic diffs and snapshot promotion.
 - [Tribe Identity Sources](tribe-identity-sources.md): tribe name, tag, description and URL evidence rules.
 - [Resolver](resolver.md): semantic killmail and identity-resolution behaviour.

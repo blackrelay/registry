@@ -151,7 +151,7 @@ Audit Sui object targets that are currently marked as provider-range blocked whe
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-The normal Cycle 6 repair path is event backfill and module-scoped `derive-events` for public chain state, followed by World API snapshots for tribe names, descriptions and URLs when available and static-client evidence for systems, constellations, regions, enemies, item/type rows and reviewed recipes. Targeted object retry mode remains available when the provider window changes. Complete Sui object coverage still requires explicit coverage evidence.
+The normal Cycle 6 repair path is event backfill and module-scoped `derive-events` for public chain state, followed by World API snapshots for tribe names, descriptions and URLs when available and native static-client decoder artefacts for systems, constellations, regions, enemies, item/type rows and reviewed recipes. Targeted object retry mode remains available when the provider window changes. Complete Sui object coverage still requires explicit coverage evidence.
 
 Use `br-indexer -mode resolve-evidence` when you want to rerun only the owner-capability and location-hash bridge after importing another public source. It promotes `owner_cap_id` and `location_hash` evidence into `owned_by` and `located_in` relations only when the value maps to exactly one public character or system in the same environment.
 
