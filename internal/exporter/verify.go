@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -131,14 +132,17 @@ func safeExportFilePath(root, name string) (string, error) {
 	if name == "" {
 		return "", errors.New("unsafe export file path: empty path")
 	}
-	if filepath.IsAbs(name) {
+	if strings.Contains(name, "\\") {
+		return "", fmt.Errorf("unsafe export file path %q: backslash paths are not allowed", name)
+	}
+	if filepath.IsAbs(name) || path.IsAbs(name) {
 		return "", fmt.Errorf("unsafe export file path %q: absolute paths are not allowed", name)
 	}
-	clean := filepath.Clean(name)
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+	clean := path.Clean(name)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
 		return "", fmt.Errorf("unsafe export file path %q: parent traversal is not allowed", name)
 	}
-	if clean != filepath.Base(clean) {
+	if clean != path.Base(clean) {
 		return "", fmt.Errorf("unsafe export file path %q: nested paths are not allowed", name)
 	}
 	return filepath.Join(root, clean), nil
