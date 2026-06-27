@@ -157,8 +157,8 @@ jobs:
             set -eu
             export GOFLAGS="-buildvcs=false"
             export GOTOOLCHAIN="auto"
-            export PATH="/usr/pkg/go125/bin:/usr/pkg/go124/bin:/usr/pkg/go123/bin:/usr/pkg/bin:/usr/pkg/sbin:${PATH}"
-            go_cmd="$(command -v go || command -v go125 || true)"
+            export PATH="/usr/pkg/go126/bin:/usr/pkg/go125/bin:/usr/pkg/go124/bin:/usr/pkg/go123/bin:/usr/pkg/bin:/usr/pkg/sbin:${PATH}"
+            go_cmd="$(command -v go || command -v go126 || command -v go125 || true)"
             if [ -z "${go_cmd}" ]; then
               echo "go not found" >&2
               /usr/sbin/pkg_info | grep '^go' >&2 || true
