@@ -45,7 +45,8 @@ type LocalStore struct {
 }
 
 func (s LocalStore) RegisterFile(ctx context.Context, inputPath string, meta RegisterMeta) (model.SourceArtefact, error) {
-	if err := validateLocalInput(inputPath, meta.AllowedRootDirs); err != nil {
+	resolvedInput, err := ResolveLocalInput(inputPath, meta.AllowedRootDirs)
+	if err != nil {
 		return model.SourceArtefact{}, err
 	}
 	if meta.SourceID == "" || meta.Kind == "" || meta.ImporterName == "" {
@@ -67,7 +68,7 @@ func (s LocalStore) RegisterFile(ctx context.Context, inputPath string, meta Reg
 	if s.Now != nil {
 		now = s.Now().UTC()
 	}
-	file, err := os.Open(inputPath)
+	file, err := os.Open(resolvedInput)
 	if err != nil {
 		return model.SourceArtefact{}, err
 	}
@@ -79,16 +80,13 @@ func (s LocalStore) RegisterFile(ctx context.Context, inputPath string, meta Reg
 	}
 	sum := hex.EncodeToString(hash.Sum(nil))
 	artefactID := fmt.Sprintf("artefact:%s", sum)
-	extension := filepath.Ext(inputPath)
-	if extension == "" {
-		extension = ".bin"
-	}
+	extension := safeArtefactExtension(resolvedInput)
 	targetDir := filepath.Join(root, sum[:2])
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return model.SourceArtefact{}, err
 	}
 	target := filepath.Join(targetDir, sum+extension)
-	if err := copyRegularFile(inputPath, target); err != nil {
+	if err := copyRegularFile(resolvedInput, target); err != nil {
 		return model.SourceArtefact{}, err
 	}
 	return model.SourceArtefact{
@@ -115,41 +113,55 @@ func (s LocalStore) RegisterFile(ctx context.Context, inputPath string, meta Reg
 	}, nil
 }
 
-func validateLocalInput(inputPath string, allowedRootDirs []string) error {
+func ResolveLocalInput(inputPath string, allowedRootDirs []string) (string, error) {
 	if inputPath == "" {
-		return errors.New("artefact path is required")
+		return "", errors.New("artefact path is required")
 	}
 	if parsed, err := url.Parse(inputPath); err == nil && parsed.Scheme != "" && parsed.Scheme != "file" && filepath.VolumeName(inputPath) == "" {
-		return fmt.Errorf("artefact path must be local, got %q", parsed.Scheme)
-	}
-	status, err := os.Lstat(inputPath)
-	if err != nil {
-		return err
-	}
-	if status.Mode()&os.ModeSymlink != 0 {
-		return errors.New("artefact path must not be a symbolic link")
-	}
-	if !status.Mode().IsRegular() {
-		return errors.New("artefact path must be a regular file")
-	}
-	if len(allowedRootDirs) == 0 {
-		return nil
+		return "", fmt.Errorf("artefact path must be local, got %q", parsed.Scheme)
 	}
 	resolvedInput, err := filepath.Abs(inputPath)
 	if err != nil {
-		return err
+		return "", err
 	}
+	if len(allowedRootDirs) == 0 {
+		return "", errors.New("at least one allowed artefact root is required")
+	}
+	insideAllowedRoot := false
 	for _, root := range allowedRootDirs {
 		resolvedRoot, err := filepath.Abs(root)
 		if err != nil {
-			return err
+			return "", err
 		}
 		rel, err := filepath.Rel(resolvedRoot, resolvedInput)
 		if err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-			return nil
+			insideAllowedRoot = true
+			break
 		}
 	}
-	return errors.New("artefact path is outside the allowed roots")
+	if !insideAllowedRoot {
+		return "", errors.New("artefact path is outside the allowed roots")
+	}
+	status, err := os.Lstat(resolvedInput)
+	if err != nil {
+		return "", err
+	}
+	if status.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("artefact path must not be a symbolic link")
+	}
+	if !status.Mode().IsRegular() {
+		return "", errors.New("artefact path must be a regular file")
+	}
+	return resolvedInput, nil
+}
+
+func safeArtefactExtension(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".bin", ".fsdbinary", ".json", ".jsonl", ".txt", ".yaml", ".yml":
+		return strings.ToLower(filepath.Ext(path))
+	default:
+		return ".bin"
+	}
 }
 
 func copyRegularFile(source, target string) error {

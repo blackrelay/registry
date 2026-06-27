@@ -61,3 +61,48 @@ func TestLocalStoreRejectsDisallowedPath(t *testing.T) {
 		t.Fatal("RegisterFile accepted a path outside the allowed roots")
 	}
 }
+
+func TestLocalStoreRequiresAllowedRoot(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "candidate.json")
+	if err := os.WriteFile(input, []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store := LocalStore{Root: filepath.Join(dir, "artefacts")}
+	_, err := store.RegisterFile(context.Background(), input, RegisterMeta{
+		SourceID:     "source:static-enemies",
+		Kind:         "static_enemy_candidates",
+		Environment:  model.EnvironmentStillness,
+		ContentType:  "application/json",
+		ImporterName: "br-import",
+		ReviewStatus: model.ReviewStatusReviewed,
+	})
+	if err == nil {
+		t.Fatal("RegisterFile accepted an artefact path without an allowed root")
+	}
+}
+
+func TestLocalStoreRejectsSymlinkInput(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "candidate.json")
+	if err := os.WriteFile(target, []byte(`{}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "candidate-link.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	store := LocalStore{Root: filepath.Join(dir, "artefacts")}
+	_, err := store.RegisterFile(context.Background(), link, RegisterMeta{
+		SourceID:        "source:static-enemies",
+		Kind:            "static_enemy_candidates",
+		Environment:     model.EnvironmentStillness,
+		ContentType:     "application/json",
+		ImporterName:    "br-import",
+		ReviewStatus:    model.ReviewStatusReviewed,
+		AllowedRootDirs: []string{dir},
+	})
+	if err == nil {
+		t.Fatal("RegisterFile accepted a symbolic link")
+	}
+}
