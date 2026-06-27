@@ -152,14 +152,19 @@ jobs:
           copyback: false
           release: "10.1"
           prepare: |
-            /usr/sbin/pkg_add -u go git || /usr/sbin/pkg_add go git
+            /usr/sbin/pkg_add go || /usr/sbin/pkg_add go125
           run: |
             set -eu
             export GOFLAGS="-buildvcs=false"
             export GOTOOLCHAIN="auto"
-            go version
-            go test -count=1 ./...
-            go build -buildvcs=false ./cmd/...
+            go_cmd="$(command -v go || command -v go125 || true)"
+            if [ -z "${go_cmd}" ]; then
+              echo "go not found" >&2
+              exit 1
+            fi
+            "${go_cmd}" version
+            "${go_cmd}" test -count=1 ./...
+            "${go_cmd}" build -buildvcs=false ./cmd/...
 
   static-analysis:
     name: CI / Static Analysis
@@ -288,6 +293,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 1
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache: true
 
       - name: Run actionlint
         run: |
