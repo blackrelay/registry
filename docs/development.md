@@ -277,9 +277,19 @@ manifest.json
 entities.jsonl
 killmails.jsonl
 sources.jsonl
+facts.jsonl
+relations.jsonl
+entity_sources.jsonl
+source_artefacts.jsonl
+current_entities.jsonl
+current_relations.jsonl
+ops_freshness.json
+ops_cursors.json
+ops_sui_coverage.json
+ops_source_gaps.json
 ```
 
-`catalog.json` and `manifest.json` record the configured registry instance id, API version, requested cycle scope, effective cycles and whether unlabelled rows were included. `manifest.json` also records each distribution file's SHA-256 checksum, byte size, row count, source database identity and collection high-water marks. The manifest records `catalog.json` and data files; the manifest file is excluded from its own checksum list.
+`catalog.json` and `manifest.json` record the configured registry instance id, API version, requested cycle scope, effective cycles and whether unlabelled rows were included. `manifest.json` also records each distribution file's SHA-256 checksum, byte size, row count, source database identity and collection high-water marks. The manifest records `catalog.json`, compact data files, provenance files, current-state files and operations documents; the manifest file is excluded from its own checksum list.
 
 Use `-registry-id` and `-api-version` or the matching environment variables when generating exports for a non-Black Relay deployment.
 

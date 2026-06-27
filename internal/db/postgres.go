@@ -1142,6 +1142,56 @@ func (s PostgresStore) GetArtefact(ctx context.Context, id string) (model.Source
 	return artefact, true, nil
 }
 
+func (s PostgresStore) ListSourceArtefactsPage(ctx context.Context, query SourceArtefactQuery) (SourceArtefactPage, error) {
+	limit := saneLimit(query.Limit, 200, 5000)
+	var args []any
+	where := "WHERE 1=1"
+	if query.Environment != "" {
+		args = append(args, query.Environment)
+		where += fmt.Sprintf(" AND environment = $%d", len(args))
+	}
+	where = addCycleColumnFilter(&args, where, "cycle", query.Cycles, query.IncludeUncycled)
+	if query.Cursor != "" {
+		decoded, err := cursor.Decode(query.Cursor)
+		if err != nil {
+			return SourceArtefactPage{}, err
+		}
+		args = append(args, decoded.Time, decoded.ID)
+		where += fmt.Sprintf(" AND (created_at, id) < ($%d, $%d)", len(args)-1, len(args))
+	}
+	args = append(args, limit+1)
+	rows, err := s.Pool.Query(ctx, `
+		SELECT id, source_id, source_kind, kind, artefact_kind, environment, path_or_uri, sha256, size_bytes, row_count,
+		  content_type, extracted_at, importer_name, importer_version, coalesce(client_build, ''), coalesce(patch_label, ''),
+		  cycle, review_status, coalesce(superseded_by_artefact_id, ''), coalesce(notes, ''), created_at
+		FROM source_artefacts `+where+`
+		ORDER BY created_at DESC, id DESC
+		LIMIT $`+strconv.Itoa(len(args)), args...)
+	if err != nil {
+		return SourceArtefactPage{}, err
+	}
+	defer rows.Close()
+	var out []model.SourceArtefact
+	for rows.Next() {
+		artefact, err := scanArtefact(rows)
+		if err != nil {
+			return SourceArtefactPage{}, err
+		}
+		out = append(out, artefact)
+	}
+	next := ""
+	if len(out) > limit {
+		out = out[:limit]
+		last := out[len(out)-1]
+		encoded, err := cursor.Encode(cursor.Keyset{Time: last.CreatedAt, ID: last.ID})
+		if err != nil {
+			return SourceArtefactPage{}, err
+		}
+		next = encoded
+	}
+	return SourceArtefactPage{Items: out, NextCursor: next}, rows.Err()
+}
+
 func (s PostgresStore) ListEvents(ctx context.Context, query EventQuery) (EventPage, error) {
 	maxLimit := query.MaxLimit
 	if maxLimit <= 0 {

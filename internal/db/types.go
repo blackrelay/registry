@@ -87,6 +87,19 @@ type SourcePage struct {
 	NextCursor string         `json:"nextCursor,omitempty"`
 }
 
+type SourceArtefactQuery struct {
+	Environment     model.Environment
+	Cycles          []int
+	IncludeUncycled bool
+	Limit           int
+	Cursor          string
+}
+
+type SourceArtefactPage struct {
+	Items      []model.SourceArtefact `json:"items"`
+	NextCursor string                 `json:"nextCursor,omitempty"`
+}
+
 type DatabaseIdentity struct {
 	Engine         string   `json:"engine"`
 	Database       string   `json:"database,omitempty"`

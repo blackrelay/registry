@@ -482,6 +482,47 @@ func (s *MemoryStore) GetArtefact(ctx context.Context, id string) (model.SourceA
 	return artefact, ok, nil
 }
 
+func (s *MemoryStore) ListSourceArtefactsPage(ctx context.Context, query SourceArtefactQuery) (SourceArtefactPage, error) {
+	_ = ctx
+	limit := saneLimit(query.Limit, 200, 5000)
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]model.SourceArtefact, 0, len(s.Artefacts))
+	for _, artefact := range s.Artefacts {
+		if query.Environment != "" && artefact.Environment != query.Environment {
+			continue
+		}
+		if !cycleInScope(artefact.Cycle, query.Cycles, query.IncludeUncycled) {
+			continue
+		}
+		out = append(out, artefact)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].ID > out[j].ID
+		}
+		return out[i].CreatedAt.After(out[j].CreatedAt)
+	})
+	if query.Cursor != "" {
+		decoded, err := cursor.Decode(query.Cursor)
+		if err != nil {
+			return SourceArtefactPage{}, err
+		}
+		out = filterArtefactsAfter(out, decoded)
+	}
+	next := ""
+	if len(out) > limit {
+		out = out[:limit]
+		last := out[len(out)-1]
+		encoded, err := cursor.Encode(cursor.Keyset{Time: last.CreatedAt, ID: last.ID})
+		if err != nil {
+			return SourceArtefactPage{}, err
+		}
+		next = encoded
+	}
+	return SourceArtefactPage{Items: out, NextCursor: next}, nil
+}
+
 func (s *MemoryStore) UpsertEntityFacts(ctx context.Context, entity model.Entity, facts []EntityFactDraft) error {
 	_ = ctx
 	s.mu.Lock()
@@ -1123,6 +1164,16 @@ func currentEntityHasTribeProfile(item model.CurrentEntity) bool {
 
 func filterSourcesAfter(items []model.Source, after cursor.Keyset) []model.Source {
 	var out []model.Source
+	for _, item := range items {
+		if item.CreatedAt.Before(after.Time) || (item.CreatedAt.Equal(after.Time) && item.ID < after.ID) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+func filterArtefactsAfter(items []model.SourceArtefact, after cursor.Keyset) []model.SourceArtefact {
+	var out []model.SourceArtefact
 	for _, item := range items {
 		if item.CreatedAt.Before(after.Time) || (item.CreatedAt.Equal(after.Time) && item.ID < after.ID) {
 			out = append(out, item)

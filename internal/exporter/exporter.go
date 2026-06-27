@@ -12,16 +12,31 @@ import (
 
 	"github.com/blackrelay/registry/internal/db"
 	"github.com/blackrelay/registry/internal/model"
+	"github.com/blackrelay/registry/internal/sui"
 )
 
 type Store interface {
 	ListEntities(ctx context.Context, query db.EntityQuery) (db.EntityPage, error)
+	ListCurrentEntities(ctx context.Context, query db.CurrentEntityQuery) (db.CurrentEntityPage, error)
+	ListCurrentRelations(ctx context.Context, query db.CurrentRelationQuery) (db.CurrentRelationPage, error)
+	ListEntityFacts(ctx context.Context, entityID string) ([]model.Fact, error)
+	ListEntityRelations(ctx context.Context, entityID string) ([]model.Relation, error)
+	ListEntitySources(ctx context.Context, entityID string) ([]model.Source, error)
 	ListEvents(ctx context.Context, query db.EventQuery) (db.EventPage, error)
 	ListKillmailRaw(ctx context.Context, query db.KillmailQuery) ([]model.KillmailRaw, string, error)
+	ListSourceArtefactsPage(ctx context.Context, query db.SourceArtefactQuery) (db.SourceArtefactPage, error)
 	ListSuiObjects(ctx context.Context, query db.SuiObjectQuery) (db.SuiObjectPage, error)
+	ListFreshness(ctx context.Context) ([]db.FreshnessStatus, error)
+	ListCursors(ctx context.Context) ([]db.CursorStatus, error)
+	ListSourceGaps(ctx context.Context, environment model.Environment) ([]model.SourceGap, error)
 	ListSources(ctx context.Context, limit int) ([]model.Source, error)
 	ListSourcesPage(ctx context.Context, query db.SourceQuery) (db.SourcePage, error)
 	ExportDatabaseIdentity(ctx context.Context) (db.DatabaseIdentity, error)
+}
+
+type entitySourceExport struct {
+	EntityID string       `json:"entityId"`
+	Source   model.Source `json:"source"`
 }
 
 type ExportOptions struct {
@@ -48,6 +63,9 @@ type ExportResult struct {
 	EntityCount     int       `json:"entityCount"`
 	KillmailCount   int       `json:"killmailCount"`
 	SourceCount     int       `json:"sourceCount"`
+	FactCount       int       `json:"factCount"`
+	RelationCount   int       `json:"relationCount"`
+	ArtefactCount   int       `json:"artefactCount"`
 	EventCount      int       `json:"eventCount,omitempty"`
 	SuiObjectCount  int       `json:"suiObjectCount,omitempty"`
 	Files           []string  `json:"files"`
@@ -124,17 +142,67 @@ func WritePublicExport(ctx context.Context, store Store, outputDir string, optio
 	if err != nil {
 		return ExportResult{}, err
 	}
+	factExport, relationExport, entitySourceExport, err := writeEntityProvenanceExports(ctx, store, outputDir, options)
+	if err != nil {
+		return ExportResult{}, err
+	}
+	artefactExport, err := writeSourceArtefactExport(ctx, store, filepath.Join(outputDir, "source_artefacts.jsonl"), options)
+	if err != nil {
+		return ExportResult{}, err
+	}
+	currentEntityExport, err := writeCurrentEntityExport(ctx, store, filepath.Join(outputDir, "current_entities.jsonl"), options)
+	if err != nil {
+		return ExportResult{}, err
+	}
+	currentRelationExport, err := writeCurrentRelationExport(ctx, store, filepath.Join(outputDir, "current_relations.jsonl"), options)
+	if err != nil {
+		return ExportResult{}, err
+	}
+	opsRows, err := writeOpsDocuments(ctx, store, outputDir)
+	if err != nil {
+		return ExportResult{}, err
+	}
 	fileRows := map[string]int{
-		"entities.jsonl":  entityExport.RowCount,
-		"killmails.jsonl": killmailExport.RowCount,
-		"sources.jsonl":   sourceExport.RowCount,
+		"entities.jsonl":          entityExport.RowCount,
+		"killmails.jsonl":         killmailExport.RowCount,
+		"sources.jsonl":           sourceExport.RowCount,
+		"facts.jsonl":             factExport.RowCount,
+		"relations.jsonl":         relationExport.RowCount,
+		"entity_sources.jsonl":    entitySourceExport.RowCount,
+		"source_artefacts.jsonl":  artefactExport.RowCount,
+		"current_entities.jsonl":  currentEntityExport.RowCount,
+		"current_relations.jsonl": currentRelationExport.RowCount,
+		"ops_freshness.json":      opsRows["ops_freshness.json"],
+		"ops_cursors.json":        opsRows["ops_cursors.json"],
+		"ops_sui_coverage.json":   opsRows["ops_sui_coverage.json"],
+		"ops_source_gaps.json":    opsRows["ops_source_gaps.json"],
 	}
 	highWaterMarks := map[string]ExportHighWaterMark{
-		"entities":  highWaterMark(entityExport),
-		"killmails": highWaterMark(killmailExport),
-		"sources":   highWaterMark(sourceExport),
+		"entities":          highWaterMark(entityExport),
+		"killmails":         highWaterMark(killmailExport),
+		"sources":           highWaterMark(sourceExport),
+		"facts":             highWaterMark(factExport),
+		"relations":         highWaterMark(relationExport),
+		"entity_sources":    highWaterMark(entitySourceExport),
+		"source_artefacts":  highWaterMark(artefactExport),
+		"current_entities":  highWaterMark(currentEntityExport),
+		"current_relations": highWaterMark(currentRelationExport),
 	}
-	dataFiles := []string{"entities.jsonl", "killmails.jsonl", "sources.jsonl"}
+	dataFiles := []string{
+		"entities.jsonl",
+		"killmails.jsonl",
+		"sources.jsonl",
+		"facts.jsonl",
+		"relations.jsonl",
+		"entity_sources.jsonl",
+		"source_artefacts.jsonl",
+		"current_entities.jsonl",
+		"current_relations.jsonl",
+		"ops_freshness.json",
+		"ops_cursors.json",
+		"ops_sui_coverage.json",
+		"ops_source_gaps.json",
+	}
 	eventExport := collectionExport{}
 	if options.IncludeEvents {
 		var err error
@@ -168,6 +236,9 @@ func WritePublicExport(ctx context.Context, store Store, outputDir string, optio
 		EntityCount:     entityExport.RowCount,
 		KillmailCount:   killmailExport.RowCount,
 		SourceCount:     sourceExport.RowCount,
+		FactCount:       factExport.RowCount,
+		RelationCount:   relationExport.RowCount,
+		ArtefactCount:   artefactExport.RowCount,
 		EventCount:      eventExport.RowCount,
 		SuiObjectCount:  suiObjectExport.RowCount,
 		Files:           append([]string{"catalog.json", "manifest.json"}, dataFiles...),
@@ -396,6 +467,263 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 	return closeCollectionExport(file, progress, nil)
 }
 
+func writeEntityProvenanceExports(ctx context.Context, store Store, outputDir string, options ExportOptions) (collectionExport, collectionExport, collectionExport, error) {
+	factFile, err := os.OpenFile(filepath.Join(outputDir, "facts.jsonl"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return collectionExport{}, collectionExport{}, collectionExport{}, err
+	}
+	relationFile, err := os.OpenFile(filepath.Join(outputDir, "relations.jsonl"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return collectionExport{}, collectionExport{}, collectionExport{}, closeFile(factFile, err)
+	}
+	entitySourceFile, err := os.OpenFile(filepath.Join(outputDir, "entity_sources.jsonl"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		_ = closeFile(relationFile, nil)
+		return collectionExport{}, collectionExport{}, collectionExport{}, closeFile(factFile, err)
+	}
+	factEncoder := json.NewEncoder(factFile)
+	relationEncoder := json.NewEncoder(relationFile)
+	entitySourceEncoder := json.NewEncoder(entitySourceFile)
+	factProgress := newCollectionExport("entity_id ASC, key ASC, source_id ASC")
+	relationProgress := newCollectionExport("subject_entity_id ASC, predicate ASC, object_entity_id ASC, source_id ASC")
+	entitySourceProgress := newCollectionExport("entity_id ASC, source_id ASC")
+	seenRelations := map[string]struct{}{}
+	seenEntitySources := map[string]struct{}{}
+	cursor := ""
+	for {
+		limit := nextPageSize(options.Limit, options.PageSize, factProgress.RowCount)
+		if limit == 0 {
+			break
+		}
+		page, err := store.ListEntities(ctx, db.EntityQuery{
+			Cycles:          options.Cycles,
+			IncludeUncycled: options.IncludeUncycled,
+			Limit:           limit,
+			Cursor:          cursor,
+		})
+		if err != nil {
+			return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+		}
+		for _, entity := range page.Items {
+			facts, err := store.ListEntityFacts(ctx, entity.ID)
+			if err != nil {
+				return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+			}
+			for _, fact := range facts {
+				if err := factEncoder.Encode(fact); err != nil {
+					return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+				}
+				factProgress.observe(fact.EntityID+":"+fact.Key+":"+fact.SourceID, time.Time{})
+			}
+			relations, err := store.ListEntityRelations(ctx, entity.ID)
+			if err != nil {
+				return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+			}
+			for _, relation := range relations {
+				key := relationExportKey(relation)
+				if _, ok := seenRelations[key]; ok {
+					continue
+				}
+				seenRelations[key] = struct{}{}
+				if err := relationEncoder.Encode(relation); err != nil {
+					return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+				}
+				relationProgress.observe(key, time.Time{})
+			}
+			sources, err := store.ListEntitySources(ctx, entity.ID)
+			if err != nil {
+				return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+			}
+			for _, source := range sources {
+				key := entity.ID + ":" + source.ID
+				if _, ok := seenEntitySources[key]; ok {
+					continue
+				}
+				seenEntitySources[key] = struct{}{}
+				item := entitySourceExport{EntityID: entity.ID, Source: source}
+				if err := entitySourceEncoder.Encode(item); err != nil {
+					return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, err)
+				}
+				entitySourceProgress.observe(key, time.Time{})
+			}
+		}
+		factProgress.NextCursor = page.NextCursor
+		relationProgress.NextCursor = page.NextCursor
+		entitySourceProgress.NextCursor = page.NextCursor
+		complete := page.NextCursor == ""
+		factProgress.Complete = complete
+		relationProgress.Complete = complete
+		entitySourceProgress.Complete = complete
+		if page.NextCursor == "" || len(page.Items) == 0 {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return factProgress, relationProgress, entitySourceProgress, closeThree(factFile, relationFile, entitySourceFile, nil)
+}
+
+func writeSourceArtefactExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return collectionExport{}, err
+	}
+	encoder := json.NewEncoder(file)
+	cursor := ""
+	progress := newCollectionExport("created_at DESC, id DESC")
+	for {
+		limit := nextPageSize(options.Limit, options.PageSize, progress.RowCount)
+		if limit == 0 {
+			break
+		}
+		page, err := store.ListSourceArtefactsPage(ctx, db.SourceArtefactQuery{
+			Cycles:          options.Cycles,
+			IncludeUncycled: options.IncludeUncycled,
+			Limit:           limit,
+			Cursor:          cursor,
+		})
+		if err != nil {
+			return closeCollectionExport(file, progress, err)
+		}
+		for _, item := range page.Items {
+			if err := encoder.Encode(item); err != nil {
+				return closeCollectionExport(file, progress, err)
+			}
+			progress.observe(item.ID, item.CreatedAt)
+		}
+		progress.NextCursor = page.NextCursor
+		progress.Complete = page.NextCursor == ""
+		if page.NextCursor == "" || len(page.Items) == 0 {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return closeCollectionExport(file, progress, nil)
+}
+
+func writeCurrentEntityExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return collectionExport{}, err
+	}
+	encoder := json.NewEncoder(file)
+	progress := newCollectionExport("type ASC, display_name ASC, entity_id ASC")
+	for _, entityType := range currentEntityExportTypes() {
+		cursor := ""
+		for {
+			limit := nextPageSize(options.Limit, options.PageSize, progress.RowCount)
+			if limit == 0 {
+				return closeCollectionExport(file, progress, nil)
+			}
+			page, err := store.ListCurrentEntities(ctx, db.CurrentEntityQuery{
+				Type:            entityType,
+				Cycles:          options.Cycles,
+				IncludeUncycled: options.IncludeUncycled,
+				Limit:           limit,
+				Cursor:          cursor,
+			})
+			if err != nil {
+				return closeCollectionExport(file, progress, err)
+			}
+			for _, item := range page.Items {
+				if err := encoder.Encode(item); err != nil {
+					return closeCollectionExport(file, progress, err)
+				}
+				progress.observe(string(entityType)+":"+item.Entity.ID, item.Entity.UpdatedAt)
+			}
+			progress.NextCursor = page.NextCursor
+			progress.Complete = page.NextCursor == ""
+			if page.NextCursor == "" || len(page.Items) == 0 {
+				break
+			}
+			cursor = page.NextCursor
+		}
+	}
+	progress.NextCursor = ""
+	progress.Complete = true
+	return closeCollectionExport(file, progress, nil)
+}
+
+func writeCurrentRelationExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return collectionExport{}, err
+	}
+	encoder := json.NewEncoder(file)
+	progress := newCollectionExport("predicate ASC, subject_entity_id ASC, object_entity_id ASC")
+	for _, predicates := range [][]string{{"owned_by"}, {"links_to", "observed_between"}} {
+		cursor := ""
+		for {
+			limit := nextPageSize(options.Limit, options.PageSize, progress.RowCount)
+			if limit == 0 {
+				return closeCollectionExport(file, progress, nil)
+			}
+			page, err := store.ListCurrentRelations(ctx, db.CurrentRelationQuery{
+				Predicates:      predicates,
+				Cycles:          options.Cycles,
+				IncludeUncycled: options.IncludeUncycled,
+				Limit:           limit,
+				Cursor:          cursor,
+			})
+			if err != nil {
+				return closeCollectionExport(file, progress, err)
+			}
+			for _, item := range page.Items {
+				if err := encoder.Encode(item); err != nil {
+					return closeCollectionExport(file, progress, err)
+				}
+				progress.observe(nonEmpty(item.ID, relationExportKey(model.Relation{
+					SubjectEntityID: item.SubjectEntityID,
+					Predicate:       item.Predicate,
+					ObjectEntityID:  item.ObjectEntityID,
+					SourceID:        item.SourceID,
+				})), item.CreatedAt)
+			}
+			progress.NextCursor = page.NextCursor
+			progress.Complete = page.NextCursor == ""
+			if page.NextCursor == "" || len(page.Items) == 0 {
+				break
+			}
+			cursor = page.NextCursor
+		}
+	}
+	progress.NextCursor = ""
+	progress.Complete = true
+	return closeCollectionExport(file, progress, nil)
+}
+
+func writeOpsDocuments(ctx context.Context, store Store, outputDir string) (map[string]int, error) {
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return nil, err
+	}
+	freshness, err := store.ListFreshness(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cursors, err := store.ListCursors(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sourceGaps, err := store.ListSourceGaps(ctx, model.EnvironmentStillness)
+	if err != nil {
+		return nil, err
+	}
+	documents := map[string]any{
+		"ops_freshness.json":    map[string]any{"data": freshness},
+		"ops_cursors.json":      map[string]any{"data": cursors},
+		"ops_sui_coverage.json": map[string]any{"data": sui.CursorCoverageSummary(cursors)},
+		"ops_source_gaps.json":  map[string]any{"data": sourceGaps},
+	}
+	rows := make(map[string]int, len(documents))
+	for name, body := range documents {
+		path := filepath.Join(outputDir, name)
+		if err := writeJSON(path, body); err != nil {
+			return nil, err
+		}
+		rows[name] = 1
+	}
+	return rows, nil
+}
+
 func nextPageSize(limit, pageSize, count int) int {
 	if limit <= 0 {
 		return pageSize
@@ -506,4 +834,45 @@ func contentTypeForExportFile(name string) string {
 		return "application/x-ndjson"
 	}
 	return "application/json"
+}
+
+func relationExportKey(relation model.Relation) string {
+	return relation.SubjectEntityID + ":" + relation.Predicate + ":" + relation.ObjectEntityID + ":" + relation.SourceID
+}
+
+func nonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func currentEntityExportTypes() []model.EntityType {
+	return []model.EntityType{
+		model.EntityTypeCharacter,
+		model.EntityTypeTribe,
+		model.EntityTypeAssembly,
+		model.EntityTypeGate,
+		model.EntityTypeStorage,
+		model.EntityTypeTurret,
+		model.EntityTypeRegion,
+		model.EntityTypeConstellation,
+		model.EntityTypeItem,
+		model.EntityTypeMaterial,
+		model.EntityTypeEnemy,
+		model.EntityTypeRecipe,
+		model.EntityTypeBlueprint,
+		model.EntityTypeShip,
+		model.EntityTypeStructure,
+		model.EntityTypeSystem,
+		model.EntityTypeRoute,
+	}
+}
+
+func closeThree(first, second, third *os.File, err error) error {
+	err = closeFile(third, err)
+	err = closeFile(second, err)
+	return closeFile(first, err)
 }

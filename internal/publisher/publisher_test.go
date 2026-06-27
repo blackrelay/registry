@@ -58,8 +58,10 @@ func TestPublishVerifiedExportWritesImmutableBundleAndLatestPointerLast(t *testi
 	if result.LatestPointerKey != "registry/latest/manifest.json" {
 		t.Fatalf("unexpected latest pointer key %q", result.LatestPointerKey)
 	}
-	if len(result.Files) != 5 {
-		t.Fatalf("expected catalog, manifest and three data files, got %#v", result.Files)
+	for _, name := range []string{"catalog.json", "manifest.json", "facts.jsonl", "source_artefacts.jsonl", "ops_sui_coverage.json"} {
+		if !publishedResultContainsFile(result, name) {
+			t.Fatalf("expected published export to include %s, got %#v", name, result.Files)
+		}
 	}
 	if objectStore.order[len(objectStore.order)-1] != result.LatestPointerKey {
 		t.Fatalf("latest pointer was not written last: %#v", objectStore.order)
@@ -78,6 +80,15 @@ func TestPublishVerifiedExportWritesImmutableBundleAndLatestPointerLast(t *testi
 	if pointer.ManifestSHA256 != result.ManifestSHA256 {
 		t.Fatalf("latest pointer did not record manifest checksum: %#v", pointer)
 	}
+}
+
+func publishedResultContainsFile(result Result, path string) bool {
+	for _, file := range result.Files {
+		if file.Path == path {
+			return true
+		}
+	}
+	return false
 }
 
 func TestPublishVerifiedExportRefusesTamperedExportWithoutWrites(t *testing.T) {
