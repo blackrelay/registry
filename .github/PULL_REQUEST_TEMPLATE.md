@@ -2,14 +2,6 @@
 
 What changed and why:
 
-## Testing
-
-Tests run:
--
-
-Not run:
--
-
 ## Data and provenance impact
 
 Does this change affect source evidence, confidence labels, cycle scope, imports, exports, resolver behaviour or API response contracts?
