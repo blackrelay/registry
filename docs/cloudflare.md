@@ -26,6 +26,16 @@ registry/bundles/<bundle-id>/catalog.json
 registry/bundles/<bundle-id>/entities.jsonl
 registry/bundles/<bundle-id>/killmails.jsonl
 registry/bundles/<bundle-id>/sources.jsonl
+registry/bundles/<bundle-id>/facts.jsonl
+registry/bundles/<bundle-id>/relations.jsonl
+registry/bundles/<bundle-id>/entity_sources.jsonl
+registry/bundles/<bundle-id>/source_artefacts.jsonl
+registry/bundles/<bundle-id>/current_entities.jsonl
+registry/bundles/<bundle-id>/current_relations.jsonl
+registry/bundles/<bundle-id>/ops_freshness.json
+registry/bundles/<bundle-id>/ops_cursors.json
+registry/bundles/<bundle-id>/ops_sui_coverage.json
+registry/bundles/<bundle-id>/ops_source_gaps.json
 registry/bundles/<bundle-id>/manifest.json
 registry/latest/manifest.json
 ```

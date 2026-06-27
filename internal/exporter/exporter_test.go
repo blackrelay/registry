@@ -33,7 +33,22 @@ func TestWritePublicExportWritesCatalogAndJSONLFiles(t *testing.T) {
 	if result.EntityCount != 1 || result.KillmailCount != 1 || result.SourceCount != 1 {
 		t.Fatalf("unexpected result %#v", result)
 	}
-	for _, name := range []string{"catalog.json", "entities.jsonl", "killmails.jsonl", "sources.jsonl"} {
+	for _, name := range []string{
+		"catalog.json",
+		"entities.jsonl",
+		"killmails.jsonl",
+		"sources.jsonl",
+		"facts.jsonl",
+		"relations.jsonl",
+		"entity_sources.jsonl",
+		"source_artefacts.jsonl",
+		"current_entities.jsonl",
+		"current_relations.jsonl",
+		"ops_freshness.json",
+		"ops_cursors.json",
+		"ops_sui_coverage.json",
+		"ops_source_gaps.json",
+	} {
 		if _, err := os.Stat(filepath.Join(dir, name)); err != nil {
 			t.Fatalf("missing %s: %v", name, err)
 		}
@@ -261,8 +276,10 @@ func TestVerifyPublicExportAcceptsGeneratedExport(t *testing.T) {
 	if !result.Valid {
 		t.Fatalf("expected export to verify: %#v", result)
 	}
-	if len(result.Files) != 4 {
-		t.Fatalf("expected catalog plus three data files to be verified, got %#v", result.Files)
+	for _, name := range []string{"facts.jsonl", "relations.jsonl", "source_artefacts.jsonl", "ops_sui_coverage.json"} {
+		if !verifyResultContainsFile(result, name) {
+			t.Fatalf("expected %s to be verified, got %#v", name, result.Files)
+		}
 	}
 }
 
@@ -496,6 +513,15 @@ func TestWritePublicExportDrainsPastPublicPageCaps(t *testing.T) {
 func containsFile(files []string, name string) bool {
 	for _, file := range files {
 		if file == name {
+			return true
+		}
+	}
+	return false
+}
+
+func verifyResultContainsFile(result VerifyResult, name string) bool {
+	for _, file := range result.Files {
+		if file.Path == name {
 			return true
 		}
 	}
