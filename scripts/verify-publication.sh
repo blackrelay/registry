@@ -2,7 +2,7 @@
 set -eu
 
 root="published-exports"
-prefixes="registry/current,registry/archive/all"
+prefixes="registry/current"
 
 usage() {
   cat <<'EOF'
@@ -10,7 +10,7 @@ Usage: ./scripts/verify-publication.sh [options]
 
 Options:
   --root PATH          Published object-store-shaped root, default published-exports
-  --prefix LIST        Comma-separated prefixes, default registry/current,registry/archive/all
+  --prefix LIST        Comma-separated prefixes, default registry/current
   -h, --help           Show this help
 EOF
 }

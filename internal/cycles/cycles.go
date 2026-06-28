@@ -27,11 +27,6 @@ type TimeWindow struct {
 
 var boundaries = []Boundary{
 	{
-		Cycle:    5,
-		StartsAt: time.Date(2026, 3, 11, 9, 0, 0, 0, time.UTC),
-		Notes:    "Cycle 5 began at 2026-03-11T09:00:00Z.",
-	},
-	{
 		Cycle:    6,
 		StartsAt: time.Date(2026, 6, 25, 9, 0, 0, 0, time.UTC),
 		Notes:    "Cycle 6 began at 2026-06-25T09:00:00Z.",
@@ -70,8 +65,6 @@ func ParseScope(value string, defaultCurrent bool) (Scope, error) {
 		return Scope{}, nil
 	}
 	switch strings.ToLower(value) {
-	case "all":
-		return Scope{}, nil
 	case "current":
 		return Scope{Cycles: []int{Current()}}, nil
 	}
@@ -84,6 +77,9 @@ func ParseScope(value string, defaultCurrent bool) (Scope, error) {
 		parsed, err := strconv.Atoi(part)
 		if err != nil || parsed <= 0 {
 			return Scope{}, fmt.Errorf("invalid cycle %q", part)
+		}
+		if parsed != Current() {
+			return Scope{}, fmt.Errorf("unsupported cycle %d", parsed)
 		}
 		seen[parsed] = struct{}{}
 	}

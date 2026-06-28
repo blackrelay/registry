@@ -669,16 +669,6 @@ func addTimeCycleWindowFilter(args *[]any, where, column string, values []int, i
 		*args = append(*args, *window.EndsBefore)
 		conditions = append(conditions, "("+column+" >= "+startPlaceholder+" AND "+column+" < $"+strconv.Itoa(len(*args))+")")
 	}
-	if includeUncycled {
-		for i, boundary := range cycles.Boundaries() {
-			if i != 0 {
-				continue
-			}
-			*args = append(*args, boundary.StartsAt)
-			conditions = append(conditions, column+" < $"+strconv.Itoa(len(*args)))
-			break
-		}
-	}
 	if len(conditions) == 0 {
 		return where + " AND false"
 	}

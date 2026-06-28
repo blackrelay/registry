@@ -454,7 +454,7 @@ func TestEventsEndpointFiltersByCycle(t *testing.T) {
 	}
 }
 
-func TestReadEndpointsDefaultToCurrentCycleAndAllowArchiveOptIn(t *testing.T) {
+func TestReadEndpointsDefaultToCurrentCycleAndRejectUnsupportedCycles(t *testing.T) {
 	store := db.NewMemoryStore()
 	ctx := context.Background()
 	now := time.Date(2026, 6, 26, 8, 0, 0, 0, time.UTC)
@@ -565,22 +565,31 @@ func TestReadEndpointsDefaultToCurrentCycleAndAllowArchiveOptIn(t *testing.T) {
 			t.Fatalf("%s returned IDs %#v, want %#v", path, got, want)
 		}
 	}
+	assertBadCycleQuery := func(path string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusBadRequest {
+			t.Fatalf("%s returned %d body %s, want bad request", path, res.Code, res.Body.String())
+		}
+	}
 
 	assertEntityIDs("/v1/current/tribes", "tribe:stillness:cycle6", "tribe:stillness:unlabelled")
 	assertEntityIDs("/v1/current/tribes?environment=stillness", "tribe:stillness:cycle6", "tribe:stillness:unlabelled")
 	assertEntityIDs("/v1/current/tribes?cycles=current", "tribe:stillness:cycle6")
 	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=6", "tribe:stillness:cycle6")
-	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=5,6", "tribe:stillness:cycle6", "tribe:stillness:cycle5")
-	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=all", "tribe:stillness:cycle6", "tribe:stillness:unlabelled", "tribe:stillness:cycle5")
 	assertEventIDs("/v1/events", "event:cycle6")
 	assertEventIDs("/v1/events?environment=stillness", "event:cycle6")
 	assertEventIDs("/v1/events?cycles=current", "event:cycle6")
-	assertEventIDs("/v1/events?environment=stillness&cycles=all", "event:cycle6", "event:cycle5")
 	assertKillmailIDs("/v1/killmails", "killmail:stillness:cycle6")
 	assertKillmailIDs("/v1/killmails?environment=stillness", "killmail:stillness:cycle6")
 	assertKillmailIDs("/v1/killmails?cycles=current", "killmail:stillness:cycle6")
-	assertKillmailIDs("/v1/killmails?environment=stillness&cycles=5", "killmail:stillness:cycle5")
-	assertKillmailIDs("/v1/killmails?environment=stillness&cycles=all", "killmail:stillness:cycle6", "killmail:stillness:cycle5")
+	assertBadCycleQuery("/v1/current/tribes?environment=stillness&cycles=5,6")
+	assertBadCycleQuery("/v1/current/tribes?environment=stillness&cycles=all")
+	assertBadCycleQuery("/v1/events?environment=stillness&cycles=all")
+	assertBadCycleQuery("/v1/killmails?environment=stillness&cycles=5")
+	assertBadCycleQuery("/v1/killmails?environment=stillness&cycles=all")
 }
 
 func TestOpsSuiCoverageSummarisesCursorHealth(t *testing.T) {
@@ -1471,10 +1480,11 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 		route string
 		want  string
 	}{
+		{route: "/v1/current/characters?environment=stillness", want: "character:stillness:2112091476"},
 		{route: "/v1/current/characters?environment=stillness&profile=known", want: "character:stillness:2112091476"},
 		{route: "/v1/current/characters?environment=stillness&profile=placeholder", want: "character:stillness:42"},
 		{route: "/v1/current/characters?environment=stillness&has_tribe=true", want: "character:stillness:2112091476"},
-		{route: "/v1/current/characters?environment=stillness&has_tribe=false", want: "character:stillness:42"},
+		{route: "/v1/current/characters?environment=stillness&profile=placeholder&has_tribe=false", want: "character:stillness:42"},
 		{route: "/v1/current/assemblies?environment=stillness&has_owner_cap=true&has_location_hash=true&has_resolved_owner=true&has_resolved_system=true", want: "assembly:stillness:100"},
 		{route: "/v1/current/assemblies?environment=stillness&has_owner_cap=false&has_location_hash=false&has_resolved_owner=false&has_resolved_system=false", want: "assembly:stillness:200"},
 	} {

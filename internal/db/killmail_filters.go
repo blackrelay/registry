@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/blackrelay/registry/internal/cycles"
 	"github.com/blackrelay/registry/internal/model"
 )
 
@@ -49,19 +48,7 @@ func killmailMatchesQuery(raw model.KillmailRaw, query KillmailQuery, relations 
 }
 
 func killmailMatchesCycleScope(raw model.KillmailRaw, cycleValues []int, includeUncycled bool) bool {
-	if len(cycleValues) == 0 {
-		return true
-	}
-	cycle := cycles.FromTime(raw.OccurredAt)
-	if cycle == nil {
-		return includeUncycled
-	}
-	for _, candidate := range cycleValues {
-		if candidate == *cycle {
-			return true
-		}
-	}
-	return false
+	return timeCycleInScope(raw.OccurredAt, cycleValues, includeUncycled)
 }
 
 func IsFixtureKillmail(raw model.KillmailRaw) bool {

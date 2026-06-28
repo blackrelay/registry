@@ -50,7 +50,7 @@ func main() {
 	environment := flag.String("environment", string(model.EnvironmentStillness), "registry environment")
 	network := flag.String("network", "sui-testnet", "Sui network from the package manifest")
 	endpoint := flag.String("endpoint", "https://graphql.testnet.sui.io/graphql", "Sui GraphQL endpoint")
-	cycleValue := flag.String("cycles", "current", "cycle scope: current, all, or comma-separated cycle numbers such as 5,6")
+	cycleValue := flag.String("cycles", "current", "cycle scope: current or 6")
 	databaseURL := flag.String("database-url", cfg.DatabaseURL, "PostgreSQL connection string")
 	staticUniversePath := flag.String("static-universe-path", "", "static-client universe extraction directory for audit-systems")
 	exportManifestPath := flag.String("export-manifest", "", "optional public export manifest path included in status output")

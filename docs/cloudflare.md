@@ -18,7 +18,7 @@ The normal Cycle 6 operator wrapper follows that order by default:
 ./scripts/refresh-cycle6.sh --max-pages 5 --concurrency 64
 ```
 
-It runs migrations, Sui append/repair work, derivation, evidence resolution, audits, the aggregate report, compact export generation into a staging directory, export verification, promotion to the configured export path and a summary write. The default export scope is the current cycle plus unlabelled rows and the default publish prefix is `registry/current`. Archive publication uses `-ExportCycles all -PublishPrefix registry/archive/all`. Repair passes can use `-SkipExport`. R2 publication uses `-PublishR2` with `BR_R2_ACCOUNT_ID`, `BR_R2_BUCKET`, `BR_R2_ACCESS_KEY_ID` and `BR_R2_SECRET_ACCESS_KEY` configured for the target bucket.
+It runs migrations, Sui append/repair work, derivation, evidence resolution, audits, the aggregate report, compact export generation into a staging directory, export verification, promotion to the configured export path and a summary write. The default export scope is the current cycle plus unlabelled rows and the default publish prefix is `registry/current`. Repair passes can use `-SkipExport`. R2 publication uses `-PublishR2` with `BR_R2_ACCOUNT_ID`, `BR_R2_BUCKET`, `BR_R2_ACCESS_KEY_ID` and `BR_R2_SECRET_ACCESS_KEY` configured for the target bucket.
 
 The local publisher writes the object-key shape intended for R2:
 ```text
@@ -40,17 +40,14 @@ registry/bundles/<bundle-id>/manifest.json
 registry/latest/manifest.json
 ```
 
-Use separate prefixes for current and archive distribution:
+Use the current distribution prefix:
 ```text
 registry/current/latest/manifest.json
 registry/current/bundles/<bundle-id>/manifest.json
 registry/current/bundles/<bundle-id>/entities.jsonl
-registry/archive/all/latest/manifest.json
-registry/archive/all/bundles/<bundle-id>/manifest.json
-registry/archive/all/bundles/<bundle-id>/entities.jsonl
 ```
 
-`latest/manifest.json` is a pointer object under each prefix. It is written last so readers see a new latest bundle after all immutable objects have been uploaded. Bundle objects can be cached as immutable; latest pointer objects should use a short TTL or revalidation policy.
+`latest/manifest.json` is a pointer object under the prefix. It is written last so readers see a new latest bundle after all immutable objects have been uploaded. Bundle objects can be cached as immutable; latest pointer objects should use a short TTL or revalidation policy.
 
 R2 integration should use either:
 - `br-export publish-r2` with the S3-compatible R2 API from local or CI publishing tools

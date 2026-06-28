@@ -2,7 +2,7 @@ package main
 
 import "testing"
 
-func TestIndexerCycleScopeDefaultsToCurrentAndAllowsArchiveOptIn(t *testing.T) {
+func TestIndexerCycleScopeDefaultsToCurrentAndRejectsArchiveOptIn(t *testing.T) {
 	scope, err := indexerCycleScope("")
 	if err != nil {
 		t.Fatal(err)
@@ -11,19 +11,17 @@ func TestIndexerCycleScopeDefaultsToCurrentAndAllowsArchiveOptIn(t *testing.T) {
 		t.Fatalf("default cycle scope = %#v, want current cycle plus unlabelled rows", scope)
 	}
 
-	scope, err = indexerCycleScope("all")
+	scope, err = indexerCycleScope("6")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !scope.All() {
-		t.Fatalf("all cycle scope = %#v, want unrestricted archive scope", scope)
+	if len(scope.Cycles) != 1 || scope.Cycles[0] != 6 || scope.IncludeUncycled {
+		t.Fatalf("explicit cycle scope = %#v, want strict current cycle", scope)
 	}
 
-	scope, err = indexerCycleScope("5,6")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(scope.Cycles) != 2 || scope.Cycles[0] != 5 || scope.Cycles[1] != 6 || scope.IncludeUncycled {
-		t.Fatalf("explicit cycle scope = %#v, want strict cycles 5 and 6", scope)
+	for _, value := range []string{"all", "5", "5,6"} {
+		if _, err := indexerCycleScope(value); err == nil {
+			t.Fatalf("unsupported cycle scope %q was accepted", value)
+		}
 	}
 }

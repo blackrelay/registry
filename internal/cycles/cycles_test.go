@@ -32,14 +32,14 @@ func TestFromTimeUsesCycleBoundaryInstants(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "cycle 5 start",
+			name: "cycle 5 period is outside supported public normalisation",
 			at:   time.Date(2026, 3, 11, 9, 0, 0, 0, time.UTC),
-			want: intRef(5),
+			want: nil,
 		},
 		{
 			name: "before cycle 6",
 			at:   time.Date(2026, 6, 25, 8, 59, 59, 0, time.UTC),
-			want: intRef(5),
+			want: nil,
 		},
 		{
 			name: "cycle 6 start",
@@ -68,7 +68,7 @@ func TestFromTimeUsesCycleBoundaryInstants(t *testing.T) {
 	}
 }
 
-func TestParseScopeDefaultsToCurrentAndSupportsArchiveOptIn(t *testing.T) {
+func TestParseScopeDefaultsToCurrentOnly(t *testing.T) {
 	tests := []struct {
 		name             string
 		value            string
@@ -84,20 +84,14 @@ func TestParseScopeDefaultsToCurrentAndSupportsArchiveOptIn(t *testing.T) {
 			wantIncludeEmpty: true,
 		},
 		{
-			name:       "all disables cycle filtering",
-			value:      "all",
-			wantAll:    true,
-			wantCycles: nil,
-		},
-		{
 			name:       "current is explicit current cycle only",
 			value:      "current",
 			wantCycles: []int{6},
 		},
 		{
-			name:       "comma-separated cycles are de-duplicated and sorted",
-			value:      "6, 5, 6",
-			wantCycles: []int{5, 6},
+			name:       "current cycle number is accepted explicitly",
+			value:      "6",
+			wantCycles: []int{6},
 		},
 	}
 	for _, tt := range tests {
@@ -125,24 +119,14 @@ func TestParseScopeDefaultsToCurrentAndSupportsArchiveOptIn(t *testing.T) {
 }
 
 func TestParseScopeRejectsInvalidCycles(t *testing.T) {
-	for _, value := range []string{"0", "-1", "five", "5,,bad"} {
+	for _, value := range []string{"0", "-1", "five", "5,,bad", "5", "all", "5,6"} {
 		if _, err := ParseScope(value, true); err == nil {
 			t.Fatalf("ParseScope(%q) succeeded, want error", value)
 		}
 	}
 }
 
-func TestWindowUsesNextCycleBoundary(t *testing.T) {
-	window, ok := Window(5)
-	if !ok {
-		t.Fatal("cycle 5 window was not found")
-	}
-	if !window.StartsAt.Equal(time.Date(2026, 3, 11, 9, 0, 0, 0, time.UTC)) {
-		t.Fatalf("cycle 5 start = %s", window.StartsAt)
-	}
-	if window.EndsBefore == nil || !window.EndsBefore.Equal(time.Date(2026, 6, 25, 9, 0, 0, 0, time.UTC)) {
-		t.Fatalf("cycle 5 end = %#v", window.EndsBefore)
-	}
+func TestWindowUsesCurrentCycleBoundary(t *testing.T) {
 	current, ok := Window(6)
 	if !ok {
 		t.Fatal("cycle 6 window was not found")

@@ -103,6 +103,12 @@ func TestImportUniverseCreatesSourceBackedSystemsRegionsAndRoutes(t *testing.T) 
 	if !hasFact(store.Facts[system.ID], "constellation_name", "Inner First") {
 		t.Fatalf("system facts did not include constellation name: %#v", store.Facts[system.ID])
 	}
+	if !hasFact(store.Facts[region.ID], "constellation_count", 1) || !hasFact(store.Facts[region.ID], "system_count", 2) {
+		t.Fatalf("region facts did not include hierarchy counts: %#v", store.Facts[region.ID])
+	}
+	if !hasFact(store.Facts[constellation.ID], "system_count", 2) {
+		t.Fatalf("constellation facts did not include system count: %#v", store.Facts[constellation.ID])
+	}
 	if !hasRelation(store.Relations, constellation.ID, "located_in", region.ID) {
 		t.Fatalf("constellation region relation was not imported: %#v", store.Relations)
 	}

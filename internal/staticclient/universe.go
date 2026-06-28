@@ -203,6 +203,22 @@ func buildUniverseEntities(environment model.Environment, sourceID string, cycle
 	now := time.Now().UTC()
 	entities := make([]db.EntityFactSet, 0, len(regions)+len(constellations)+len(systems)+len(jumps))
 	relations := make([]db.RelationDraft, 0, len(constellations)+len(systems)*2+len(jumps)*3)
+	regionConstellationCounts := make(map[string]int)
+	regionSystemCounts := make(map[string]int)
+	constellationSystemCounts := make(map[string]int)
+	for _, constellation := range constellations {
+		if constellation.RegionID != "" {
+			regionConstellationCounts[constellation.RegionID]++
+		}
+	}
+	for _, system := range systems {
+		if system.RegionID != "" {
+			regionSystemCounts[system.RegionID]++
+		}
+		if system.ConstellationID != "" {
+			constellationSystemCounts[system.ConstellationID]++
+		}
+	}
 	for _, region := range sortedRegions(regions) {
 		entity := model.Entity{
 			ID:          regionEntityID(environment, region.ID),
@@ -216,10 +232,12 @@ func buildUniverseEntities(environment model.Environment, sourceID string, cycle
 			UpdatedAt:   now,
 		}
 		entities = append(entities, db.EntityFactSet{Entity: entity, Facts: facts(sourceID, environment, cycle, map[string]any{
-			"region_id": region.ID,
-			"x":         vectorCoordinate(region.Raw["center"], 0),
-			"y":         vectorCoordinate(region.Raw["center"], 1),
-			"z":         vectorCoordinate(region.Raw["center"], 2),
+			"region_id":           region.ID,
+			"constellation_count": regionConstellationCounts[region.ID],
+			"system_count":        regionSystemCounts[region.ID],
+			"x":                   vectorCoordinate(region.Raw["center"], 0),
+			"y":                   vectorCoordinate(region.Raw["center"], 1),
+			"z":                   vectorCoordinate(region.Raw["center"], 2),
 		})})
 	}
 	for _, constellation := range sortedConstellations(constellations) {
@@ -239,6 +257,7 @@ func buildUniverseEntities(environment model.Environment, sourceID string, cycle
 			"constellation_id": constellation.ID,
 			"region_id":        constellation.RegionID,
 			"region_name":      region.Name,
+			"system_count":     constellationSystemCounts[constellation.ID],
 			"x":                vectorCoordinate(constellation.Raw["center"], 0),
 			"y":                vectorCoordinate(constellation.Raw["center"], 1),
 			"z":                vectorCoordinate(constellation.Raw["center"], 2),

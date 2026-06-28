@@ -443,7 +443,7 @@ func importStaticUniverse(args []string) {
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	clientBuild := flags.String("client-build", "", "client build label from the extraction source")
 	patchLabel := flags.String("patch-label", "", "patch label or operator label for this extraction")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	if strings.TrimSpace(*path) == "" {
@@ -484,7 +484,7 @@ func importStaticClientTypes(args []string) {
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	clientBuild := flags.String("client-build", "", "client build label from the extraction source")
 	patchLabel := flags.String("patch-label", "", "patch label or operator label for this extraction")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	if strings.TrimSpace(*path) == "" {
@@ -525,7 +525,7 @@ func importStaticClientRecipes(args []string) {
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	clientBuild := flags.String("client-build", "", "client build label from the extraction source")
 	patchLabel := flags.String("patch-label", "", "patch label or operator label for this extraction")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	if strings.TrimSpace(*path) == "" {
@@ -569,7 +569,7 @@ func importStaticClientEnemies(args []string) {
 	enemyGroups := flags.String("enemy-groups", "5033,4963,4770,5130", "comma-separated static-client group IDs treated as reviewed NPC groups")
 	enemyTypeIDs := flags.String("enemy-type-ids", "85702,88089", "comma-separated reviewed individual enemy type IDs")
 	wreckTypeID := flags.Int("wreck-type-id", 81610, "required wreck type ID for default enemy extraction")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	if strings.TrimSpace(*path) == "" {
@@ -624,7 +624,7 @@ func importDatahubTypes(args []string) {
 	artefactRoot := flags.String("artefact-root", cfg.ArtefactRoot, "local source artefact storage directory")
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	sourceURL := flags.String("source-url", "", "public source URL recorded for provenance; private EVE Frontier hosts are rejected")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	cycle, err := singleImportCycle(*cycleValue)
@@ -675,7 +675,7 @@ func importWorldSystems(args []string) {
 	artefactRoot := flags.String("artefact-root", cfg.ArtefactRoot, "local source artefact storage directory")
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	sourceURL := flags.String("source-url", "", "public source URL recorded for provenance; private EVE Frontier hosts are rejected")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	cycle, err := singleImportCycle(*cycleValue)
@@ -726,7 +726,7 @@ func importWorldTribes(args []string) {
 	artefactRoot := flags.String("artefact-root", cfg.ArtefactRoot, "local source artefact storage directory")
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	sourceURL := flags.String("source-url", "", "public source URL recorded for provenance; private EVE Frontier hosts are rejected")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	cycle, err := singleImportCycle(*cycleValue)
@@ -776,7 +776,7 @@ func importStaticEnemiesJSONL(args []string) {
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
 	clientBuild := flags.String("client-build", "", "client build label from the extraction source")
 	patchLabel := flags.String("patch-label", "", "patch label or operator label for this extraction")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	cycle, err := singleImportCycle(*cycleValue)
@@ -810,7 +810,7 @@ func importStaticEnemies(args []string) {
 	databaseURL := flags.String("database-url", cfg.DatabaseURL, "PostgreSQL connection string")
 	artefactRoot := flags.String("artefact-root", cfg.ArtefactRoot, "local source artefact storage directory")
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for this import: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	cycle, err := singleImportCycle(*cycleValue)
@@ -843,7 +843,7 @@ func importTribeIdentities(args []string) {
 	databaseURL := flags.String("database-url", cfg.DatabaseURL, "PostgreSQL connection string")
 	artefactRoot := flags.String("artefact-root", cfg.ArtefactRoot, "local source artefact storage directory")
 	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
-	cycleValue := flags.String("cycles", "current", "cycle stamp for rows without a cycle: current, all, or one cycle number")
+	cycleValue := flags.String("cycles", "current", "cycle stamp for rows without a cycle: current or 6")
 	migrate := flags.Bool("migrate", true, "apply migrations before importing")
 	flags.Parse(args)
 	if strings.TrimSpace(*path) == "" {
@@ -985,7 +985,7 @@ func singleImportCycle(value string) (*int, error) {
 		return nil, nil
 	}
 	if len(scope.Cycles) != 1 {
-		return nil, fmt.Errorf("import commands accept one cycle or all, got %s", strings.Join(intsToStrings(scope.Cycles), ","))
+		return nil, fmt.Errorf("import commands accept current or one supported cycle, got %s", strings.Join(intsToStrings(scope.Cycles), ","))
 	}
 	cycle := scope.Cycles[0]
 	return &cycle, nil

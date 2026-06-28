@@ -31,8 +31,17 @@ func deriveCurrentEntity(item *model.CurrentEntity) {
 				derived.LocationHash = relatedObject(relation)
 			}
 		case "located_in", "located_at", "deployed_in", "observed_in":
-			if relation.ObjectEntityType == model.EntityTypeSystem {
+			switch relation.ObjectEntityType {
+			case model.EntityTypeSystem:
 				derived.System = relatedObject(relation)
+			case model.EntityTypeConstellation:
+				derived.Constellation = relatedObject(relation)
+			case model.EntityTypeRegion:
+				derived.Region = relatedObject(relation)
+			}
+		case "member_of_region":
+			if relation.ObjectEntityType == model.EntityTypeRegion {
+				derived.Region = relatedObject(relation)
 			}
 		case "links_to":
 			if relation.ObjectEntityType == model.EntityTypeSystem {
@@ -95,6 +104,8 @@ func hasDerivedState(derived model.CurrentDerived) bool {
 		derived.Tribe != nil ||
 		derived.Owner != nil ||
 		derived.System != nil ||
+		derived.Constellation != nil ||
+		derived.Region != nil ||
 		derived.OwnerCap != nil ||
 		derived.LocationHash != nil ||
 		derived.MemberCount != 0 ||
