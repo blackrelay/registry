@@ -42,7 +42,7 @@ Use the native static-universe decoder to recover system, constellation, region 
 go run ./cmd/br-import static-client-decode-universe -client-path "/path/to/eve-frontier/stillness" -out ./tmp/static-client-universe-stillness
 ```
 
-The decoder resolves these client resources through `resfileindex.txt`:
+The decoder resolves these client resources through the resource file index:
 ```text
 res:/staticdata/regions.static
 res:/staticdata/constellations.static
