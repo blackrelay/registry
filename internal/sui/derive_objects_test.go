@@ -200,6 +200,85 @@ func TestDeriveGraphFromGateObjectCreatesLinkedGateRelation(t *testing.T) {
 	}
 }
 
+func TestDeriveGraphFromGateObjectCompactsLongHexGateNames(t *testing.T) {
+	object := db.SuiObjectRecord{
+		ID:          "object:0xgate:9",
+		ObjectID:    "0xgate",
+		Environment: model.EnvironmentStillness,
+		TypeRepr:    testPackageID + "::gate::Gate",
+		PackageID:   testPackageID,
+		Module:      "gate",
+		TypeName:    "Gate",
+		SourceID:    "source:sui:sui-testnet:graphql:objects",
+		ObservedAt:  time.Date(2026, 6, 26, 12, 0, 0, 0, time.UTC),
+		Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "0x00132c79dc203b2dc04bd84a31c04130e6af21990c7d4ed7f16247ea255db190",
+				},
+			},
+		},
+	}
+
+	graph := DeriveGraphFromObject(object)
+	for _, entity := range graph.Entities {
+		if entity.Entity.Type == model.EntityTypeGate {
+			if entity.Entity.DisplayName != "Gate 00132c79dc20" {
+				t.Fatalf("long gate identity was not compacted: %#v", entity.Entity)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing gate entity %#v", graph.Entities)
+}
+
+func TestDeriveGraphFromGateObjectPromotesExplicitSystemAndCoordinates(t *testing.T) {
+	object := db.SuiObjectRecord{
+		ID:          "object:0xgate:10",
+		ObjectID:    "0xgate",
+		Environment: model.EnvironmentStillness,
+		TypeRepr:    testPackageID + "::gate::Gate",
+		PackageID:   testPackageID,
+		Module:      "gate",
+		TypeName:    "Gate",
+		SourceID:    "source:sui:sui-testnet:graphql:objects",
+		ObservedAt:  time.Date(2026, 6, 26, 12, 0, 0, 0, time.UTC),
+		Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{
+					"tenant":  "stillness",
+					"item_id": "100",
+				},
+				"location": map[string]any{
+					"solar_system_id": map[string]any{"tenant": "stillness", "item_id": "30001001"},
+					"x":               "12.5",
+					"y":               "-3.25",
+					"z":               "8",
+				},
+			},
+		},
+	}
+
+	graph := DeriveGraphFromObject(object)
+	var gate *DerivedObjectEntity
+	for i := range graph.Entities {
+		if graph.Entities[i].Entity.ID == "gate:stillness:100" {
+			gate = &graph.Entities[i]
+			break
+		}
+	}
+	if gate == nil {
+		t.Fatalf("missing gate entity %#v", graph.Entities)
+	}
+	if !hasFact(gate.Facts, "solar_system_id", "30001001") || !hasFact(gate.Facts, "x", "12.5") || !hasFact(gate.Facts, "y", "-3.25") || !hasFact(gate.Facts, "z", "8") {
+		t.Fatalf("gate location facts were not preserved: %#v", gate.Facts)
+	}
+	if !hasObjectRelation(graph.Relations, "gate:stillness:100", "located_in", "system:stillness:30001001") {
+		t.Fatalf("missing gate system relation %#v", graph.Relations)
+	}
+}
+
 func TestDeriveGraphFromInfrastructureObjectCreatesCapAndLocationEvidenceOnly(t *testing.T) {
 	object := db.SuiObjectRecord{
 		ID:          "object:0xassembly:8",

@@ -321,6 +321,7 @@ func (s *MemoryStore) ListCurrentEntities(ctx context.Context, query CurrentEnti
 		}
 		items = append(items, item)
 	}
+	items = dedupeCurrentEntities(items, query)
 	sortCurrentEntities(items, query)
 	if hasCursor {
 		items = filterCurrentEntitiesAfter(items, after)

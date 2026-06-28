@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/blackrelay/registry/internal/model"
@@ -223,6 +224,156 @@ func currentEntityMatchesQuery(item model.CurrentEntity, query CurrentEntityQuer
 	return true
 }
 
+func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery) []model.CurrentEntity {
+	if len(items) < 2 {
+		return items
+	}
+	out := make([]model.CurrentEntity, 0, len(items))
+	characterIndexes := make(map[string]int)
+	changed := false
+	for _, item := range items {
+		key := currentCharacterIdentityKey(item)
+		if key == "" {
+			out = append(out, item)
+			continue
+		}
+		if index, ok := characterIndexes[key]; ok {
+			changed = true
+			existing := out[index]
+			if preferCurrentCharacterIdentity(item, existing) {
+				out[index] = mergeCurrentIdentityRows(item, existing)
+			} else {
+				out[index] = mergeCurrentIdentityRows(existing, item)
+			}
+			continue
+		}
+		characterIndexes[key] = len(out)
+		out = append(out, item)
+	}
+	if !changed {
+		return items
+	}
+	return out
+}
+
+func currentCharacterIdentityKey(item model.CurrentEntity) string {
+	if item.Entity.Type != model.EntityTypeCharacter {
+		return ""
+	}
+	address := strings.ToLower(strings.TrimSpace(factString(item.Facts["character_address"])))
+	if address == "" {
+		return ""
+	}
+	name := strings.ToLower(strings.TrimSpace(nonEmpty(item.Entity.DisplayName, item.Entity.Name)))
+	if name == "" {
+		name = strings.ToLower(strings.TrimSpace(factString(item.Facts["metadata_name"])))
+	}
+	if name == "" || shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
+		return ""
+	}
+	return fmt.Sprintf("%s:%s:%s", item.Entity.Environment, address, name)
+}
+
+func preferCurrentCharacterIdentity(candidate, existing model.CurrentEntity) bool {
+	candidateScore := currentCharacterIdentityScore(candidate)
+	existingScore := currentCharacterIdentityScore(existing)
+	if candidateScore != existingScore {
+		return candidateScore > existingScore
+	}
+	if !candidate.Entity.UpdatedAt.Equal(existing.Entity.UpdatedAt) {
+		return candidate.Entity.UpdatedAt.After(existing.Entity.UpdatedAt)
+	}
+	return candidate.Entity.ID > existing.Entity.ID
+}
+
+func currentCharacterIdentityScore(item model.CurrentEntity) int {
+	score := 0
+	if hasEventBackedCharacterEvidence(item) {
+		score += 1000
+	}
+	if item.Entity.Cycle != nil {
+		score += *item.Entity.Cycle * 10
+	}
+	if item.Derived != nil && item.Derived.Profile != nil {
+		score += 5
+	}
+	if !shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
+		score++
+	}
+	return score
+}
+
+func hasEventBackedCharacterEvidence(item model.CurrentEntity) bool {
+	return hasNonEmptyFact(item, "source_event_kind") ||
+		hasNonEmptyFact(item, "source_event_id") ||
+		hasNonEmptyFact(item, "transaction_digest")
+}
+
+func mergeCurrentIdentityRows(winner, loser model.CurrentEntity) model.CurrentEntity {
+	merged := winner
+	merged.Facts = mergeCurrentFacts(winner.Facts, loser.Facts)
+	merged.SourceIDs = mergeSourceIDs(winner.SourceIDs, loser.SourceIDs)
+	merged.OutgoingRelations = mergeCurrentRelations(winner.OutgoingRelations, loser.OutgoingRelations)
+	merged.IncomingRelations = mergeCurrentRelations(winner.IncomingRelations, loser.IncomingRelations)
+	merged.Derived = nil
+	deriveCurrentEntity(&merged)
+	return merged
+}
+
+func mergeCurrentFacts(primary, secondary map[string]any) map[string]any {
+	merged := make(map[string]any, len(primary)+len(secondary))
+	for key, value := range primary {
+		merged[key] = value
+	}
+	for key, value := range secondary {
+		if _, ok := merged[key]; !ok || strings.TrimSpace(fmt.Sprint(merged[key])) == "" {
+			merged[key] = value
+		}
+	}
+	return merged
+}
+
+func mergeSourceIDs(primary, secondary []string) []string {
+	seen := make(map[string]struct{}, len(primary)+len(secondary))
+	var out []string
+	for _, sourceID := range append(primary, secondary...) {
+		sourceID = strings.TrimSpace(sourceID)
+		if sourceID == "" {
+			continue
+		}
+		if _, ok := seen[sourceID]; ok {
+			continue
+		}
+		seen[sourceID] = struct{}{}
+		out = append(out, sourceID)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func mergeCurrentRelations(primary, secondary []model.CurrentRelation) []model.CurrentRelation {
+	seen := make(map[string]struct{}, len(primary)+len(secondary))
+	out := make([]model.CurrentRelation, 0, len(primary)+len(secondary))
+	add := func(relation model.CurrentRelation) {
+		key := relation.ID
+		if key == "" {
+			key = fmt.Sprintf("%s:%s:%s:%s", relation.SubjectEntityID, relation.Predicate, relation.ObjectEntityID, relation.SourceID)
+		}
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		out = append(out, relation)
+	}
+	for _, relation := range primary {
+		add(relation)
+	}
+	for _, relation := range secondary {
+		add(relation)
+	}
+	return out
+}
+
 func matchesProfileState(item model.CurrentEntity, state string) bool {
 	switch strings.ToLower(strings.TrimSpace(state)) {
 	case "known":
@@ -246,11 +397,38 @@ func currentRelationMatchesQuery(item model.CurrentRelation, query CurrentRelati
 
 func hasOutgoingRelation(item model.CurrentEntity, predicate, objectID string) bool {
 	for _, relation := range item.OutgoingRelations {
-		if relation.Predicate == predicate && relation.ObjectEntityID == objectID {
+		if relation.Predicate == predicate && currentRelationObjectMatches(relation, objectID) {
 			return true
 		}
 	}
 	return false
+}
+
+func currentRelationObjectMatches(relation model.CurrentRelation, objectID string) bool {
+	if relation.ObjectEntityID == objectID {
+		return true
+	}
+	if relation.ObjectEntityType != model.EntityTypeTribe {
+		return false
+	}
+	return sameTribeIdentity(relation.ObjectEntityID, objectID)
+}
+
+func sameTribeIdentity(left, right string) bool {
+	left = tribeIdentityToken(left)
+	right = tribeIdentityToken(right)
+	return left != "" && left == right
+}
+
+func tribeIdentityToken(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if index := strings.LastIndex(value, ":"); index >= 0 {
+		value = value[index+1:]
+	}
+	return strings.TrimSpace(value)
 }
 
 func hasRelationInEitherDirection(item model.CurrentEntity, predicates map[string]struct{}, relatedID string) bool {

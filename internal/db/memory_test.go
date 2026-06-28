@@ -119,6 +119,61 @@ func TestMemoryStorePreservesImportedSystemDisplayWhenPlaceholderArrives(t *test
 	}
 }
 
+func TestMemoryStorePreservesImportedItemDisplayWhenStaticTypePlaceholderArrives(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	imported := model.Entity{
+		ID:          "item:stillness:type:3001",
+		Slug:        "item-char-3001-stillness",
+		Type:        model.EntityTypeItem,
+		Name:        "Char",
+		DisplayName: "Char",
+		Summary:     "Static-client type metadata.",
+		Environment: model.EnvironmentStillness,
+	}
+	if err := store.UpsertEntityFacts(ctx, imported, []EntityFactDraft{{
+		Key:          "type_id",
+		Value:        3001,
+		SourceID:     "source:static-client:types:stillness",
+		Confidence:   model.ConfidenceVerified,
+		Environment:  model.EnvironmentStillness,
+		ReviewStatus: model.ReviewStatusReviewed,
+	}}); err != nil {
+		t.Fatalf("insert imported item identity: %v", err)
+	}
+
+	placeholder := model.Entity{
+		ID:          "item:stillness:type:3001",
+		Slug:        "item-input-type-3001-stillness",
+		Type:        model.EntityTypeItem,
+		Name:        "Input type 3001",
+		DisplayName: "Input type 3001",
+		Summary:     "Static-client type placeholder from recipe metadata, type 3001.",
+		Environment: model.EnvironmentStillness,
+	}
+	if err := store.UpsertEntityFacts(ctx, placeholder, []EntityFactDraft{{
+		Key:          "recipe_quantity",
+		Value:        20,
+		SourceID:     "source:static-client:recipes:stillness",
+		Confidence:   model.ConfidenceVerified,
+		Environment:  model.EnvironmentStillness,
+		ReviewStatus: model.ReviewStatusReviewed,
+	}}); err != nil {
+		t.Fatalf("insert recipe placeholder item identity: %v", err)
+	}
+
+	got, ok, err := store.GetEntity(ctx, imported.ID)
+	if err != nil {
+		t.Fatalf("GetEntity returned error: %v", err)
+	}
+	if !ok {
+		t.Fatal("item entity missing")
+	}
+	if got.Name != "Char" || got.DisplayName != "Char" {
+		t.Fatalf("placeholder overwrote imported item display: %#v", got)
+	}
+}
+
 func TestMemoryStorePreservesImportedCharacterDisplayWhenPlaceholderArrives(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()

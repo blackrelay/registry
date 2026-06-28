@@ -112,6 +112,12 @@ func DeriveEntityFromObject(object db.SuiObjectRecord) (DerivedObjectEntity, boo
 		facts.add("type_id", numberOrString(jsonValue["type_id"]))
 		facts.add("status", variantValue(jsonValue["status"]))
 		facts.add("location_hash", locationHash(jsonValue["location"]))
+		if system, ok := locationSystem(jsonValue, object.Environment); ok {
+			facts.add("solar_system_id", system.ItemID)
+		}
+		facts.add("x", locationCoordinate(jsonValue, "x"))
+		facts.add("y", locationCoordinate(jsonValue, "y"))
+		facts.add("z", locationCoordinate(jsonValue, "z"))
 		facts.add("energy_source_id", stringFrom(jsonValue["energy_source_id"]))
 		facts.add("linked_gate_id", stringFrom(jsonValue["linked_gate_id"]))
 	case model.EntityTypeSite:
@@ -178,8 +184,8 @@ func (b *objectGraphBuilder) gateRelations(gateID string, jsonValue map[string]a
 			ID:          linkedID,
 			Slug:        entitySlug(model.EntityTypeGate, tenantItem{Tenant: scope, ItemID: linkedGateID}),
 			Type:        model.EntityTypeGate,
-			Name:        "Gate " + linkedGateID,
-			DisplayName: "Gate " + linkedGateID,
+			Name:        "Gate " + compactIdentityLabel(linkedGateID),
+			DisplayName: "Gate " + compactIdentityLabel(linkedGateID),
 			Summary:     "Public on-chain gate identity referenced from Sui object data.",
 			Environment: b.object.Environment,
 			Cycle:       b.cycle(),
@@ -206,6 +212,10 @@ func (b *objectGraphBuilder) infrastructureEvidenceRelations(entityID string, js
 		resourceID := resourceObjectID(scope, "location-hash", locationHash)
 		b.resourceObject(resourceID, "location-hash", locationHash, scope, "Public on-chain location hash observed from Sui object data.")
 		b.relation(entityID, "has_location_hash", resourceID)
+	}
+	if system, ok := locationSystem(jsonValue, b.object.Environment); ok {
+		systemID := b.system(system)
+		b.relation(entityID, "located_in", systemID)
 	}
 }
 
@@ -506,7 +516,7 @@ func objectName(entityType model.EntityType, displayName, itemID, objectID strin
 		label = "On-chain object"
 	}
 	if itemID != "" {
-		return label + " " + itemID
+		return label + " " + compactIdentityLabel(itemID)
 	}
 	return label + " " + shortObjectID(objectID)
 }
@@ -587,6 +597,48 @@ func locationHash(value any) string {
 		return ""
 	}
 	return locationHashValue(record["location_hash"])
+}
+
+func locationRecord(payload map[string]any) map[string]any {
+	if payload == nil {
+		return nil
+	}
+	record, ok := payload["location"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	return record
+}
+
+func locationSystem(payload map[string]any, environment model.Environment) (tenantItem, bool) {
+	if key, ok := firstTenantItem(payload, []string{"solar_system_id", "solarSystemId", "system_id", "systemId", "solarsystem"}); ok {
+		return tenantItem{Tenant: tenantOrEnvironment(key.Tenant, environment), ItemID: key.ItemID}, true
+	}
+	location := locationRecord(payload)
+	if key, ok := firstTenantItem(location, []string{"solar_system_id", "solarSystemId", "system_id", "systemId", "solarsystem"}); ok {
+		return tenantItem{Tenant: tenantOrEnvironment(key.Tenant, environment), ItemID: key.ItemID}, true
+	}
+	for _, key := range []string{"solar_system_id", "solarSystemId", "system_id", "systemId", "solarsystem"} {
+		if value := stringFrom(numberOrString(payload[key])); value != "" {
+			return tenantItem{Tenant: string(environment), ItemID: value}, true
+		}
+		if location != nil {
+			if value := stringFrom(numberOrString(location[key])); value != "" {
+				return tenantItem{Tenant: string(environment), ItemID: value}, true
+			}
+		}
+	}
+	return tenantItem{}, false
+}
+
+func locationCoordinate(payload map[string]any, key string) string {
+	if value := stringFrom(numberOrString(payload[key])); value != "" {
+		return value
+	}
+	if location := locationRecord(payload); location != nil {
+		return stringFrom(numberOrString(location[key]))
+	}
+	return ""
 }
 
 func locationHashValue(value any) string {
@@ -683,6 +735,29 @@ func shortObjectID(objectID string) string {
 		return "unknown"
 	}
 	return value
+}
+
+func compactIdentityLabel(value string) string {
+	value = strings.TrimSpace(value)
+	if isLongHexIdentity(value) {
+		return shortObjectID(value)
+	}
+	return value
+}
+
+func isLongHexIdentity(value string) bool {
+	value = strings.TrimSpace(value)
+	trimmed := strings.TrimPrefix(value, "0x")
+	if len(trimmed) <= 16 {
+		return false
+	}
+	for _, char := range trimmed {
+		if (char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F') {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func compactStrings(values ...string) []string {

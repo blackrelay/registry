@@ -662,7 +662,7 @@ func (b *eventGraphBuilder) objectLike(entityType model.EntityType, label string
 	entityID := entityID(entityType, tenantOrEnvironment(key.Tenant, b.event.Environment), key.ItemID)
 	name := metadataName(payload["metadata"])
 	if name == "" {
-		name = label + " " + key.ItemID
+		name = label + " " + compactIdentityLabel(key.ItemID)
 	}
 	facts := b.facts()
 	facts.add("item_id", key.ItemID)
@@ -672,6 +672,12 @@ func (b *eventGraphBuilder) objectLike(entityType model.EntityType, label string
 	facts.add("type_id", numberOrString(payload["type_id"]))
 	facts.add("status", variantValue(payload["status"]))
 	facts.add("location_hash", locationHash(payload["location"]))
+	if system, ok := locationSystem(payload, b.event.Environment); ok {
+		facts.add("solar_system_id", system.ItemID)
+	}
+	facts.add("x", locationCoordinate(payload, "x"))
+	facts.add("y", locationCoordinate(payload, "y"))
+	facts.add("z", locationCoordinate(payload, "z"))
 	facts.add("metadata_name", metadataName(payload["metadata"]))
 	facts.add("metadata_description", metadataField(payload["metadata"], "description"))
 	facts.add("metadata_url", metadataField(payload["metadata"], "url"))
@@ -688,6 +694,10 @@ func (b *eventGraphBuilder) objectLike(entityType model.EntityType, label string
 		Environment: b.event.Environment,
 		UpdatedAt:   time.Now().UTC(),
 	}, facts.values())
+	if system, ok := locationSystem(payload, b.event.Environment); ok {
+		systemID := b.system(system)
+		b.relation(entityID, "located_in", systemID)
+	}
 	return entityID
 }
 

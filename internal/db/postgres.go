@@ -757,8 +757,20 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 		where += " AND false"
 	}
 	if query.TribeID != "" {
-		args = append(args, query.TribeID)
-		where += fmt.Sprintf(" AND EXISTS (SELECT 1 FROM entity_relations r WHERE r.subject_entity_id = e.id AND r.predicate = 'belongs_to' AND r.object_entity_id = $%d AND r.valid_to IS NULL)", len(args))
+		args = append(args, query.TribeID, tribeIdentityToken(query.TribeID))
+		where += fmt.Sprintf(` AND EXISTS (
+			SELECT 1 FROM entity_relations r
+			WHERE r.subject_entity_id = e.id
+			  AND r.predicate = 'belongs_to'
+			  AND r.valid_to IS NULL
+			  AND (
+			    r.object_entity_id = $%d
+			    OR (
+			      nullif(btrim($%d), '') IS NOT NULL
+			      AND regexp_replace(r.object_entity_id, '^.*:', '') = $%d
+			    )
+			  )
+		)`, len(args)-1, len(args), len(args))
 	}
 	if query.OwnerID != "" {
 		args = append(args, query.OwnerID)
@@ -904,7 +916,11 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 		    )
 		  THEN 0 ELSE 1 END ASC, e.updated_at DESC, e.id DESC`
 	}
-	args = append(args, limit+1)
+	fetchLimit := limit + 1
+	if query.Type == model.EntityTypeCharacter {
+		fetchLimit = limit*4 + 1
+	}
+	args = append(args, fetchLimit)
 	rows, err := s.Pool.Query(ctx, `
 		SELECT e.id, e.slug, e.entity_type, e.name, coalesce(e.display_name, ''), coalesce(e.summary, ''), e.environment, e.cycle, e.updated_at,
 		  facts_json, outgoing_relations_json, incoming_relations_json, source_ids
@@ -926,10 +942,19 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 	if err := rows.Err(); err != nil {
 		return CurrentEntityPage{}, err
 	}
+	rawItems := items
+	items = dedupeCurrentEntities(items, query)
 	next := ""
 	if len(items) > limit {
 		items = items[:limit]
 		last := items[len(items)-1].Entity
+		encoded, err := cursor.Encode(cursor.Keyset{Time: last.UpdatedAt, ID: last.ID})
+		if err != nil {
+			return CurrentEntityPage{}, err
+		}
+		next = encoded
+	} else if len(rawItems) == fetchLimit {
+		last := rawItems[len(rawItems)-1].Entity
 		encoded, err := cursor.Encode(cursor.Keyset{Time: last.UpdatedAt, ID: last.ID})
 		if err != nil {
 			return CurrentEntityPage{}, err
