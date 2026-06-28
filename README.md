@@ -46,28 +46,50 @@ PostgreSQL is the working Registry database. Raw source artefacts preserve evide
 
 ## Release Files
 
-Published releases are available from [GitHub Releases](https://github.com/blackrelay/registry/releases/latest). Platform archives include versioned file names, so the README links to the latest release page rather than pretending there are stable archive URLs.
+Published releases are available from [GitHub Releases](https://github.com/blackrelay/registry/releases/latest).
 
-Verification files keep stable names on each release:
+[![Windows](https://img.shields.io/badge/-Windows_x64-fe4700.svg?style=for-the-badge&logo=windows11&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_amd64.exe "Windows x64")
+[![Linux](https://img.shields.io/badge/-Linux_x64-fe4700.svg?style=for-the-badge&logo=linux&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_amd64 "Linux x64")
+[![macOS](https://img.shields.io/badge/-macOS_Arm64-fe4700.svg?style=for-the-badge&logo=apple&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_arm64 "macOS Arm64")
+[![Source TAR](https://img.shields.io/badge/-Source_TAR-8b3b08.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/tarball/main "Source TAR")
+[![All versions](https://img.shields.io/badge/-All_Versions-1a0b05.svg?style=for-the-badge&labelColor=070200)](https://github.com/blackrelay/registry/releases "All Versions")
+
+Recommended API server files:
+
+File | Description
+:--- | :---
+[`br-registry_windows_amd64.exe`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_amd64.exe) | Windows x64 API server binary
+[`br-registry_linux_amd64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_amd64) | Linux x64 API server binary
+[`br-registry_darwin_arm64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_arm64) | macOS Apple Silicon API server binary
+
+Alternative direct server files:
+
+File | Description
+:--- | :---
+[`br-registry_windows_arm64.exe`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_arm64.exe) | Windows Arm64 API server binary
+[`br-registry_linux_arm64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_arm64) | Linux Arm64 API server binary
+[`br-registry_darwin_amd64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_amd64) | macOS Intel API server binary
+
+Download a command bundle when you need importer, indexer, migration or export commands as well as the API server.
+
+Bundle | Description
+:--- | :---
+[`blackrelay-registry_linux_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_linux_amd64.tar.gz) | Linux x64 command bundle
+[`blackrelay-registry_linux_arm64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_linux_arm64.tar.gz) | Linux Arm64 command bundle
+[`blackrelay-registry_windows_amd64.zip`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_windows_amd64.zip) | Windows x64 command bundle
+[`blackrelay-registry_windows_arm64.zip`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_windows_arm64.zip) | Windows Arm64 command bundle
+[`blackrelay-registry_darwin_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_darwin_amd64.tar.gz) | macOS Intel command bundle
+[`blackrelay-registry_darwin_arm64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_darwin_arm64.tar.gz) | macOS Apple Silicon command bundle
+[`blackrelay-registry_freebsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_freebsd_amd64.tar.gz) | FreeBSD x64 command bundle
+[`blackrelay-registry_openbsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_openbsd_amd64.tar.gz) | OpenBSD x64 command bundle
+[`blackrelay-registry_netbsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_netbsd_amd64.tar.gz) | NetBSD x64 command bundle
+
+Verification files:
 - [SHA2-256SUMS](https://github.com/blackrelay/registry/releases/latest/download/SHA2-256SUMS)
 - [SHA2-256SUMS.sig](https://github.com/blackrelay/registry/releases/latest/download/SHA2-256SUMS.sig)
 - [SHA2-512SUMS](https://github.com/blackrelay/registry/releases/latest/download/SHA2-512SUMS)
 - [SHA2-512SUMS.sig](https://github.com/blackrelay/registry/releases/latest/download/SHA2-512SUMS.sig)
 - [public.key](https://github.com/blackrelay/registry/releases/latest/download/public.key)
-
-Archive names use this pattern:
-
-Platform | Archive name
-:--- | :---
-Linux amd64 | `blackrelay-registry_<version>_linux_amd64.tar.gz`
-Linux arm64 | `blackrelay-registry_<version>_linux_arm64.tar.gz`
-Windows amd64 | `blackrelay-registry_<version>_windows_amd64.zip`
-Windows arm64 | `blackrelay-registry_<version>_windows_arm64.zip`
-macOS amd64 | `blackrelay-registry_<version>_darwin_amd64.tar.gz`
-macOS arm64 | `blackrelay-registry_<version>_darwin_arm64.tar.gz`
-FreeBSD amd64 | `blackrelay-registry_<version>_freebsd_amd64.tar.gz`
-OpenBSD amd64 | `blackrelay-registry_<version>_openbsd_amd64.tar.gz`
-NetBSD amd64 | `blackrelay-registry_<version>_netbsd_amd64.tar.gz`
 
 ## Quick Proof Path
 

@@ -136,6 +136,7 @@ jobs:
           case "${draft}" in true|false) ;; *) echo "Error: draft must be true or false"; exit 1 ;; esac
 
           commit="$(git rev-parse HEAD)"
+          release_notes_file="docs/release/${version}.md"
 
           GIT_ASKPASS="${RELEASE_GIT_ASKPASS}" GIT_TERMINAL_PROMPT=0 \
             git fetch --no-tags origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
@@ -162,6 +163,7 @@ jobs:
             echo "prerelease=${prerelease}"
             echo "draft=${draft}"
             echo "tag_exists=${tag_exists}"
+            echo "release_notes_file=${release_notes_file}"
           } >> "${GITHUB_OUTPUT}"
 
           {
@@ -174,7 +176,30 @@ jobs:
             echo "- Draft: ${draft}"
             echo "- Prerelease: ${prerelease}"
             echo "- Existing tag: ${tag_exists}"
+            echo "- Release notes: ${release_notes_file}"
           } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Check Release Notes
+        run: |
+          set -euo pipefail
+
+          release_notes_file="${{ steps.metadata.outputs.release_notes_file }}"
+          changelog_marker="<!-- changelog: do not remove this line or add a changelog -->"
+
+          if [ ! -f "${release_notes_file}" ]; then
+            echo "Error: checked-in release notes file '${release_notes_file}' does not exist"
+            exit 1
+          fi
+
+          if ! grep -Fxq "${changelog_marker}" "${release_notes_file}"; then
+            echo "Error: release notes file '${release_notes_file}' must contain the changelog marker"
+            exit 1
+          fi
+
+          if grep -Eq '^# Black Relay Registry v[0-9]+\.[0-9]+\.[0-9]+' "${release_notes_file}"; then
+            echo "Error: release notes should not include the release-title heading; the GitHub release title supplies it"
+            exit 1
+          fi
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -260,7 +285,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          version="${{ steps.metadata.outputs.version }}"
           platforms=(
             linux_amd64.tar.gz
             linux_arm64.tar.gz
@@ -273,10 +297,27 @@ jobs:
             netbsd_amd64.tar.gz
           )
 
+          primary_assets=(
+            br-registry_linux_amd64
+            br-registry_linux_arm64
+            br-registry_windows_amd64.exe
+            br-registry_windows_arm64.exe
+            br-registry_darwin_amd64
+            br-registry_darwin_arm64
+          )
+
           for platform in "${platforms[@]}"; do
-            asset="dist/release-assets/blackrelay-registry_${version}_${platform}"
+            asset="dist/release-assets/blackrelay-registry_${platform}"
             if [ ! -f "${asset}" ]; then
               echo "Missing release asset: ${asset}"
+              exit 1
+            fi
+          done
+
+          for asset in "${primary_assets[@]}"; do
+            path="dist/release-assets/${asset}"
+            if [ ! -f "${path}" ]; then
+              echo "Missing primary release asset: ${path}"
               exit 1
             fi
           done
@@ -385,51 +426,41 @@ jobs:
           set -euo pipefail
 
           version="${{ steps.metadata.outputs.version }}"
+          commit="${{ steps.metadata.outputs.commit }}"
+          release_notes_file="${{ steps.metadata.outputs.release_notes_file }}"
           notes_file="${RUNNER_TEMP}/release-notes.md"
-          release_url="https://github.com/blackrelay/registry/releases/tag/${version}"
           download_url="https://github.com/blackrelay/registry/releases/download/${version}"
 
           cat > "${notes_file}" <<EOF
-          # Black Relay Registry ${version}
-
           <div align="center">
 
-          [![Release](https://img.shields.io/badge/Release-${version}-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${release_url} "Release ${version}")
-          [![SHA-256](https://img.shields.io/badge/SHA--256-signed-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/SHA2-256SUMS "Signed SHA-256 Manifest")
-          [![SHA-512](https://img.shields.io/badge/SHA--512-signed-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/SHA2-512SUMS "Signed SHA-512 Manifest")
-          [![Public Key](https://img.shields.io/badge/Public%20Key-release-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/public.key "Release Signing Public Key")
-          [![OpenAPI](https://img.shields.io/badge/OpenAPI-v1-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/openapi/registry.v1.yaml "OpenAPI Contract")
-          [![Licence](https://img.shields.io/badge/Licence-Apache--2.0-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/LICENSE "Apache-2.0 Licence")
+          [![Which file?](https://img.shields.io/badge/-Which_file%3F-1a0b05.svg?style=for-the-badge&labelColor=070200)](https://github.com/blackrelay/registry#release-files "Which file should I download?") [![Windows](https://img.shields.io/badge/-Windows_x64-fe4700.svg?style=for-the-badge&logo=windows11&logoColor=white&labelColor=1a0b05)](${download_url}/br-registry_windows_amd64.exe "Windows x64") [![Linux](https://img.shields.io/badge/-Linux_x64-fe4700.svg?style=for-the-badge&logo=linux&logoColor=white&labelColor=1a0b05)](${download_url}/br-registry_linux_amd64 "Linux x64") [![macOS](https://img.shields.io/badge/-macOS_Arm64-fe4700.svg?style=for-the-badge&logo=apple&logoColor=white&labelColor=1a0b05)](${download_url}/br-registry_darwin_arm64 "macOS Arm64") [![Source TAR](https://img.shields.io/badge/-Source_TAR-8b3b08.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/archive/refs/tags/${version}.tar.gz "Source TAR") [![Checksums](https://img.shields.io/badge/-Signed_checksums-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](${download_url}/SHA2-256SUMS "Signed checksum manifests") [![OpenAPI](https://img.shields.io/badge/-OpenAPI_v1-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/openapi/registry.v1.yaml "OpenAPI Contract") [![Licence](https://img.shields.io/badge/-Apache_2.0-fe4700.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/blob/${version}/LICENSE "Apache-2.0 Licence")
 
           </div>
 
-          This release contains command archives for Linux, Windows, macOS, FreeBSD, OpenBSD and NetBSD.
+          A description of the release files is in the [README](https://github.com/blackrelay/registry#release-files).
 
-          Verify downloaded archives with the signed checksum manifests before use. Import public.key, verify SHA2-256SUMS.sig against SHA2-256SUMS or SHA2-512SUMS.sig against SHA2-512SUMS then check the downloaded archive against the verified manifest.
+          Verify downloaded archives with the signed checksum manifests before running them. Import \`public.key\`, verify \`SHA2-256SUMS.sig\` against \`SHA2-256SUMS\` or \`SHA2-512SUMS.sig\` against \`SHA2-512SUMS\`, then check the downloaded archive against the verified manifest.
 
-          ## Assets
+          ---
 
-          | Platform | Archive |
-          | --- | --- |
-          | Linux amd64 | [blackrelay-registry_${version}_linux_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_linux_amd64.tar.gz) |
-          | Linux arm64 | [blackrelay-registry_${version}_linux_arm64.tar.gz](${download_url}/blackrelay-registry_${version}_linux_arm64.tar.gz) |
-          | Windows amd64 | [blackrelay-registry_${version}_windows_amd64.zip](${download_url}/blackrelay-registry_${version}_windows_amd64.zip) |
-          | Windows arm64 | [blackrelay-registry_${version}_windows_arm64.zip](${download_url}/blackrelay-registry_${version}_windows_arm64.zip) |
-          | macOS amd64 | [blackrelay-registry_${version}_darwin_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_darwin_amd64.tar.gz) |
-          | macOS arm64 | [blackrelay-registry_${version}_darwin_arm64.tar.gz](${download_url}/blackrelay-registry_${version}_darwin_arm64.tar.gz) |
-          | FreeBSD amd64 | [blackrelay-registry_${version}_freebsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_freebsd_amd64.tar.gz) |
-          | OpenBSD amd64 | [blackrelay-registry_${version}_openbsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_openbsd_amd64.tar.gz) |
-          | NetBSD amd64 | [blackrelay-registry_${version}_netbsd_amd64.tar.gz](${download_url}/blackrelay-registry_${version}_netbsd_amd64.tar.gz) |
-
-          ## Verification Files
-
-          - [SHA2-256SUMS](${download_url}/SHA2-256SUMS)
-          - [SHA2-256SUMS.sig](${download_url}/SHA2-256SUMS.sig)
-          - [SHA2-512SUMS](${download_url}/SHA2-512SUMS)
-          - [SHA2-512SUMS.sig](${download_url}/SHA2-512SUMS.sig)
-          - [public.key](${download_url}/public.key)
-          - [Licence](https://github.com/blackrelay/registry/blob/${version}/LICENSE)
           EOF
+
+          awk '
+            /^## Changelog[[:space:]]*$/ { exit }
+            /^# Changelog[[:space:]]*$/ { exit }
+            /^<!--[[:space:]]*changelog:/ { exit }
+            { print }
+          ' "${release_notes_file}" >> "${notes_file}"
+
+          printf '\n## Changelog\n\n' >> "${notes_file}"
+
+          previous_tag="$(git describe --tags --abbrev=0 "${commit}^" 2>/dev/null || true)"
+          if [ -n "${previous_tag}" ]; then
+            git log --reverse --format='- %H %s' "${previous_tag}..${commit}" >> "${notes_file}"
+          else
+            git log --reverse --format='- %H %s' "${commit}" >> "${notes_file}"
+          fi
 
           echo "notes_file=${notes_file}" >> "${GITHUB_OUTPUT}"
 
