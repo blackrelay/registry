@@ -37,7 +37,23 @@ The reviewed set contains 26 enemy rows. Group `27` is not treated as an enemy g
 
 ## Static Universe Import
 
-Use the static universe importer for raw local extraction output:
+Use the native static-universe decoder to recover system, constellation, region and jump rows from the installed client:
+```sh
+go run ./cmd/br-import static-client-decode-universe -client-path "/path/to/eve-frontier/stillness" -out ./tmp/static-client-universe-stillness
+```
+
+The decoder resolves these client resources through the resource file index:
+```text
+res:/staticdata/regions.static
+res:/staticdata/constellations.static
+res:/staticdata/systems.static
+res:/staticdata/jumps.static
+res:/localizationfsd/localization_fsd_en-us.pickle
+```
+
+It writes the import-compatible JSON extraction under `fsd_binary_schema`. System, region and constellation names are resolved from native static-client row fields first, with localisation used only as a fallback. The importer does not copy display-only web map data.
+
+Import the decoded extraction:
 ```sh
 go run ./cmd/br-import static-universe -path ./tmp/static-client-universe-stillness
 ```

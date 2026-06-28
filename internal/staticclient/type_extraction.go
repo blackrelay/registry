@@ -287,8 +287,37 @@ func repairStaticClientName(value string) string {
 			value = string(runes[1 : len(runes)-1])
 			continue
 		}
-		return trimmed
+		return stripPairedStaticNameQuoteTokens(trimmed)
 	}
+}
+
+func stripPairedStaticNameQuoteTokens(value string) string {
+	fields := strings.Fields(value)
+	changed := false
+	for i, field := range fields {
+		stripped := stripPairedStaticNameQuoteToken(field)
+		if stripped != field {
+			changed = true
+			fields[i] = stripped
+		}
+	}
+	if !changed {
+		return value
+	}
+	return strings.Join(fields, " ")
+}
+
+func stripPairedStaticNameQuoteToken(value string) string {
+	runes := []rune(value)
+	if len(runes) < 3 {
+		return value
+	}
+	first := runes[0]
+	last := runes[len(runes)-1]
+	if (first == '\'' || first == '’' || first == '‘') && (last == '\'' || last == '’' || last == '‘') {
+		return string(runes[1 : len(runes)-1])
+	}
+	return value
 }
 
 func isStaticTextWordRune(r rune) bool {

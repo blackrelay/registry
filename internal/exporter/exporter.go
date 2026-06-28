@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/blackrelay/registry/internal/db"
+	"github.com/blackrelay/registry/internal/killmail"
 	"github.com/blackrelay/registry/internal/model"
+	"github.com/blackrelay/registry/internal/resolver"
 	"github.com/blackrelay/registry/internal/sui"
 )
 
@@ -19,11 +21,15 @@ type Store interface {
 	ListEntities(ctx context.Context, query db.EntityQuery) (db.EntityPage, error)
 	ListCurrentEntities(ctx context.Context, query db.CurrentEntityQuery) (db.CurrentEntityPage, error)
 	ListCurrentRelations(ctx context.Context, query db.CurrentRelationQuery) (db.CurrentRelationPage, error)
+	GetEntity(ctx context.Context, idOrSlug string) (model.Entity, bool, error)
 	ListEntityFacts(ctx context.Context, entityID string) ([]model.Fact, error)
 	ListEntityRelations(ctx context.Context, entityID string) ([]model.Relation, error)
 	ListEntitySources(ctx context.Context, entityID string) ([]model.Source, error)
 	ListEvents(ctx context.Context, query db.EventQuery) (db.EventPage, error)
 	ListKillmailRaw(ctx context.Context, query db.KillmailQuery) ([]model.KillmailRaw, string, error)
+	ResolveCharacter(ctx context.Context, idOrName string, environment model.Environment) (model.ResolvedValue, bool, error)
+	ResolveEnemyType(ctx context.Context, typeID string, environment model.Environment) (model.ResolvedValue, bool, error)
+	ResolveSystem(ctx context.Context, idOrName string, environment model.Environment) (model.ResolvedValue, bool, error)
 	ListSourceArtefactsPage(ctx context.Context, query db.SourceArtefactQuery) (db.SourceArtefactPage, error)
 	ListSuiObjects(ctx context.Context, query db.SuiObjectQuery) (db.SuiObjectPage, error)
 	ListFreshness(ctx context.Context) ([]db.FreshnessStatus, error)
@@ -37,6 +43,18 @@ type Store interface {
 type entitySourceExport struct {
 	EntityID string       `json:"entityId"`
 	Source   model.Source `json:"source"`
+}
+
+type killmailExportRow struct {
+	model.KillmailRaw
+	Kind        string              `json:"kind"`
+	System      model.ResolvedValue `json:"system"`
+	Victim      model.ResolvedValue `json:"victim"`
+	Killer      model.ResolvedValue `json:"killer"`
+	Reporter    model.ResolvedValue `json:"reporter"`
+	SummaryText string              `json:"summaryText,omitempty"`
+	Sources     []string            `json:"sources,omitempty"`
+	Warnings    []string            `json:"warnings,omitempty"`
 }
 
 type ExportOptions struct {
@@ -359,6 +377,10 @@ func writeKillmailExport(ctx context.Context, store Store, path string, options 
 		return collectionExport{}, err
 	}
 	encoder := json.NewEncoder(file)
+	semanticService := killmail.Service{
+		Resolver:   resolver.Resolver{Store: store},
+		GraphStore: store,
+	}
 	cursor := ""
 	progress := newCollectionExport("occurred_at DESC, id DESC")
 	for {
@@ -376,7 +398,18 @@ func writeKillmailExport(ctx context.Context, store Store, path string, options 
 			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range items {
-			if err := encoder.Encode(item); err != nil {
+			semantic := semanticService.Semantic(ctx, item)
+			if err := encoder.Encode(killmailExportRow{
+				KillmailRaw: item,
+				Kind:        semantic.Kind,
+				System:      semantic.System,
+				Victim:      semantic.Victim,
+				Killer:      semantic.Killer,
+				Reporter:    semantic.Reporter,
+				SummaryText: semantic.SummaryText,
+				Sources:     semantic.Sources,
+				Warnings:    semantic.Warnings,
+			}); err != nil {
 				return closeCollectionExport(file, progress, err)
 			}
 			progress.observe(item.ID, item.OccurredAt)

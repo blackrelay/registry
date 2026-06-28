@@ -80,7 +80,8 @@ func TestImportTypesTrimsStaticClientNameWrapperQuotes(t *testing.T) {
 	path := filepath.Join(dir, "static-client-types.json")
 	writeFixture(t, path, `{
 		"candidates": [
-			{"groupId":9003,"name":"'Analytical Mind'","typeId":3001}
+			{"groupId":9003,"name":"'Analytical Mind'","typeId":3001},
+			{"groupId":9003,"name":"'Augmented' Acolyte","typeId":3002}
 		]
 	}`)
 	store := db.NewMemoryStore()
@@ -94,6 +95,10 @@ func TestImportTypesTrimsStaticClientNameWrapperQuotes(t *testing.T) {
 	entity := store.Entities["item:stillness:type:3001"]
 	if entity.Name != "Analytical Mind" || entity.DisplayName != "Analytical Mind" {
 		t.Fatalf("static-client wrapper quotes were not trimmed: %#v", entity)
+	}
+	entity = store.Entities["item:stillness:type:3002"]
+	if entity.Name != "Augmented Acolyte" || entity.DisplayName != "Augmented Acolyte" {
+		t.Fatalf("static-client paired name quotes were not trimmed: %#v", entity)
 	}
 }
 
