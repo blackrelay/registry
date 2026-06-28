@@ -48,7 +48,7 @@ PostgreSQL is the working Registry database. Raw source artefacts preserve evide
 
 Published releases are available from [GitHub Releases](https://github.com/blackrelay/registry/releases/latest).
 
-[![Windows](https://img.shields.io/badge/-Windows_x64-fe4700.svg?style=for-the-badge&logo=windows11&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_amd64.exe "Windows x64")
+[![Windows](https://img.shields.io/badge/-Windows_x64-fe4700.svg?style=for-the-badge&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0zIDQuNiAxMC42IDMuNnY3LjJIM1Y0LjZabTguNi0xLjFMMjEgMi4ydjguNmgtOS40VjMuNVpNMyAxMmg3LjZ2Ny4yTDMgMTguMlYxMlptOC42IDBIMjF2OC42bC05LjQtMS4zVjEyWiIvPjwvc3ZnPg%3D%3D&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_amd64.exe "Windows x64")
 [![Linux](https://img.shields.io/badge/-Linux_x64-fe4700.svg?style=for-the-badge&logo=linux&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_amd64 "Linux x64")
 [![macOS](https://img.shields.io/badge/-macOS_Arm64-fe4700.svg?style=for-the-badge&logo=apple&logoColor=white&labelColor=1a0b05)](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_arm64 "macOS Arm64")
 [![Source TAR](https://img.shields.io/badge/-Source_TAR-8b3b08.svg?style=for-the-badge&labelColor=1a0b05)](https://github.com/blackrelay/registry/tarball/main "Source TAR")
