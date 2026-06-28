@@ -81,7 +81,8 @@ func TestImportTypesTrimsStaticClientNameWrapperQuotes(t *testing.T) {
 	writeFixture(t, path, `{
 		"candidates": [
 			{"groupId":9003,"name":"'Analytical Mind'","typeId":3001},
-			{"groupId":9003,"name":"'Augmented' Acolyte","typeId":3002}
+			{"groupId":9003,"name":"'Augmented' Acolyte","typeId":3002},
+			{"groupId":9003,"name":"'True Creations' Manufacture Passcard","typeId":3003}
 		]
 	}`)
 	store := db.NewMemoryStore()
@@ -99,6 +100,10 @@ func TestImportTypesTrimsStaticClientNameWrapperQuotes(t *testing.T) {
 	entity = store.Entities["item:stillness:type:3002"]
 	if entity.Name != "Augmented Acolyte" || entity.DisplayName != "Augmented Acolyte" {
 		t.Fatalf("static-client paired name quotes were not trimmed: %#v", entity)
+	}
+	entity = store.Entities["item:stillness:type:3003"]
+	if entity.Name != "True Creations Manufacture Passcard" || entity.DisplayName != "True Creations Manufacture Passcard" {
+		t.Fatalf("static-client quoted prefix was not trimmed: %#v", entity)
 	}
 }
 

@@ -292,6 +292,13 @@ func repairStaticClientName(value string) string {
 }
 
 func stripPairedStaticNameQuoteTokens(value string) string {
+	for {
+		next, changed := stripLeadingStaticNameQuotePhrase(value)
+		if !changed {
+			break
+		}
+		value = next
+	}
 	fields := strings.Fields(value)
 	changed := false
 	for i, field := range fields {
@@ -307,6 +314,29 @@ func stripPairedStaticNameQuoteTokens(value string) string {
 	return strings.Join(fields, " ")
 }
 
+func stripLeadingStaticNameQuotePhrase(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	runes := []rune(value)
+	if len(runes) < 3 || !isStaticNameQuoteRune(runes[0]) {
+		return value, false
+	}
+	for i := 1; i < len(runes); i++ {
+		if !isStaticNameQuoteRune(runes[i]) {
+			continue
+		}
+		prefix := strings.TrimSpace(string(runes[1:i]))
+		suffix := strings.TrimSpace(string(runes[i+1:]))
+		if prefix == "" {
+			return value, false
+		}
+		if suffix == "" {
+			return prefix, true
+		}
+		return prefix + " " + suffix, true
+	}
+	return value, false
+}
+
 func stripPairedStaticNameQuoteToken(value string) string {
 	runes := []rune(value)
 	if len(runes) < 3 {
@@ -314,10 +344,14 @@ func stripPairedStaticNameQuoteToken(value string) string {
 	}
 	first := runes[0]
 	last := runes[len(runes)-1]
-	if (first == '\'' || first == '’' || first == '‘') && (last == '\'' || last == '’' || last == '‘') {
+	if isStaticNameQuoteRune(first) && isStaticNameQuoteRune(last) {
 		return string(runes[1 : len(runes)-1])
 	}
 	return value
+}
+
+func isStaticNameQuoteRune(r rune) bool {
+	return r == '\'' || r == '’' || r == '‘'
 }
 
 func isStaticTextWordRune(r rune) bool {
