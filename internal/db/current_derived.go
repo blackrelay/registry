@@ -313,8 +313,12 @@ func mergeCurrentIdentityRows(winner, loser model.CurrentEntity) model.CurrentEn
 	merged := winner
 	merged.Facts = mergeCurrentFacts(winner.Facts, loser.Facts)
 	merged.SourceIDs = mergeSourceIDs(winner.SourceIDs, loser.SourceIDs)
-	merged.OutgoingRelations = mergeCurrentRelations(winner.OutgoingRelations, loser.OutgoingRelations)
-	merged.IncomingRelations = mergeCurrentRelations(winner.IncomingRelations, loser.IncomingRelations)
+	merged.OutgoingRelations = mergeCurrentRelations(winner.OutgoingRelations, loser.OutgoingRelations, func(relation model.CurrentRelation) bool {
+		return relation.SubjectEntityID == winner.Entity.ID
+	})
+	merged.IncomingRelations = mergeCurrentRelations(winner.IncomingRelations, loser.IncomingRelations, func(relation model.CurrentRelation) bool {
+		return relation.ObjectEntityID == winner.Entity.ID
+	})
 	merged.Derived = nil
 	deriveCurrentEntity(&merged)
 	return merged
@@ -351,10 +355,13 @@ func mergeSourceIDs(primary, secondary []string) []string {
 	return out
 }
 
-func mergeCurrentRelations(primary, secondary []model.CurrentRelation) []model.CurrentRelation {
+func mergeCurrentRelations(primary, secondary []model.CurrentRelation, keep func(model.CurrentRelation) bool) []model.CurrentRelation {
 	seen := make(map[string]struct{}, len(primary)+len(secondary))
 	out := make([]model.CurrentRelation, 0, len(primary)+len(secondary))
 	add := func(relation model.CurrentRelation) {
+		if keep != nil && !keep(relation) {
+			return
+		}
 		key := relation.ID
 		if key == "" {
 			key = fmt.Sprintf("%s:%s:%s:%s", relation.SubjectEntityID, relation.Predicate, relation.ObjectEntityID, relation.SourceID)

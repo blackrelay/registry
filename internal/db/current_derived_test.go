@@ -182,6 +182,14 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 				"character_address": characterAddress,
 				"object_id":         "0x782282305a916627bb9a96e89d24224c6bb2d4db14a85f2208311a91e65c3bf7",
 			},
+			OutgoingRelations: []model.CurrentRelation{{
+				ID:                "relation:legacy-character-tribe",
+				SubjectEntityID:   "character:stillness:2112092421",
+				SubjectEntityType: model.EntityTypeCharacter,
+				Predicate:         "belongs_to",
+				ObjectEntityID:    "tribe:stillness:1000167",
+				ObjectEntityType:  model.EntityTypeTribe,
+			}},
 			SourceIDs: []string{"source:sui-object:legacy"},
 		},
 		{
@@ -199,6 +207,14 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 				"source_event_kind": "character.created",
 				"source_event_id":   "event:character-created",
 			},
+			OutgoingRelations: []model.CurrentRelation{{
+				ID:                "relation:event-character-tribe",
+				SubjectEntityID:   "character:stillness:2112092610",
+				SubjectEntityType: model.EntityTypeCharacter,
+				Predicate:         "belongs_to",
+				ObjectEntityID:    "tribe:stillness:1000167",
+				ObjectEntityType:  model.EntityTypeTribe,
+			}},
 			SourceIDs: []string{"source:sui-event:cycle-6"},
 		},
 	}
@@ -216,6 +232,12 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 	}
 	if !containsString(deduped[0].SourceIDs, "source:sui-object:legacy") || !containsString(deduped[0].SourceIDs, "source:sui-event:cycle-6") {
 		t.Fatalf("source evidence was not merged: %#v", deduped[0].SourceIDs)
+	}
+	if len(deduped[0].OutgoingRelations) != 1 {
+		t.Fatalf("expected only winning row relations to remain, got %#v", deduped[0].OutgoingRelations)
+	}
+	if deduped[0].OutgoingRelations[0].SubjectEntityID != deduped[0].Entity.ID {
+		t.Fatalf("stale duplicate subject relation leaked into current row: %#v", deduped[0].OutgoingRelations[0])
 	}
 }
 
