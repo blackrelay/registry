@@ -19,7 +19,7 @@ go run ./cmd/br-import static-client-extract-types -client-path "/path/to/eve-fr
 go run ./cmd/br-import static-client-extract-types -client-path "/path/to/eve-frontier/stillness" -native-scan -out ./tmp/static-client-types.native-scan.json
 go run ./cmd/br-import static-client-extract-types -client-path "/path/to/eve-frontier/stillness" -resolved-json ./tmp/static-client-types-current.json -out ./tmp/static-client-types-all.json
 go run ./cmd/br-import static-client-extract-production -client-path "/path/to/eve-frontier/stillness" -out ./tmp/static-client-production-resources.json
-go run ./cmd/br-import datahub-types -path testdata/fixtures/datahub-types.json
+go run ./cmd/br-import datahub-types -path ./local-extract/datahub-types.json
 go run ./cmd/br-import world-systems -path testdata/fixtures/world-systems.json
 go run ./cmd/br-export -out exports
 go run honnef.co/go/tools/cmd/staticcheck@latest ./...

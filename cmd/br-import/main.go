@@ -617,7 +617,7 @@ func importStaticClientEnemies(args []string) {
 func importDatahubTypes(args []string) {
 	cfg := config.Load()
 	flags := flag.NewFlagSet("datahub-types", flag.ExitOnError)
-	path := flags.String("path", "testdata/fixtures/datahub-types.json", "Datahub type metadata JSON path")
+	path := flags.String("path", "local-extract/datahub-types.json", "Datahub type metadata JSON path")
 	fetchURL := flags.String("url", "", "fetch a public Datahub JSON snapshot before importing")
 	snapshotPath := flags.String("snapshot-path", "", "local output path for a fetched Datahub snapshot")
 	databaseURL := flags.String("database-url", cfg.DatabaseURL, "PostgreSQL connection string")

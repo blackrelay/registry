@@ -99,9 +99,7 @@ go run ./cmd/br-migrate
 Import reviewed fixture data:
 ```sh
 go run ./cmd/br-import static-enemies -path testdata/fixtures/static-enemies.reviewed.json
-go run ./cmd/br-import tribe-identities -path testdata/fixtures/tribe-identities.reviewed.json
 go run ./cmd/br-import world-tribes -path testdata/fixtures/world-tribes.json
-go run ./cmd/br-import datahub-types -path testdata/fixtures/datahub-types.json
 go run ./cmd/br-import world-systems -path testdata/fixtures/world-systems.json
 go run ./cmd/br-import killmail-fixture -path testdata/fixtures/killmail.npc-caird.json
 ```

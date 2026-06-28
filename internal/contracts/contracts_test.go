@@ -139,13 +139,6 @@ func TestTribeIdentityContractValidatesReviewedRows(t *testing.T) {
 	}
 }
 
-func TestTribeIdentityFixtureValidates(t *testing.T) {
-	validator := NewValidator(filepath.Join("..", "..", "contracts"))
-	if err := validator.ValidateFile("tribe-identities.v1.schema.json", filepath.Join("..", "..", "testdata", "fixtures", "tribe-identities.reviewed.json")); err != nil {
-		t.Fatalf("tribe identity fixture did not validate: %v", err)
-	}
-}
-
 func TestTribeIdentityContractRejectsUnreviewedRows(t *testing.T) {
 	data := []byte(`{
 	  "schemaVersion": "registry.tribe-identities.v1",

@@ -17,7 +17,7 @@ Other community sites resolving tribe names can help identify possible sources. 
 
 The public Datacore frontend repository confirms that tribe API responses can contain names, tickers, descriptions, URLs and membership counts. The inspected code is frontend/generated-client code, so Registry treats it as source-discovery context. See [Tribe Identity Sources](tribe-identity-sources.md).
 
-The contract fixture at `testdata/fixtures/tribe-identities.reviewed.json` shows the reviewed artefact shape with example data.
+The reviewed artefact example at `local-extract/tribe-identities.reviewed.json` shows the accepted shape.
 
 The public EVE Frontier contracts and SDK expose `name`, `description` and `url` inside character and assembly-style metadata. Those fields may be recorded from public Sui object or event evidence for the object they belong to. Tribe profile metadata requires a source that explicitly maps those fields to a tribe id.
 
