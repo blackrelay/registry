@@ -208,6 +208,8 @@ type CurrentDerived struct {
 	Tribe                *CurrentRelatedEntity `json:"tribe,omitempty"`
 	Owner                *CurrentRelatedEntity `json:"owner,omitempty"`
 	System               *CurrentRelatedEntity `json:"system,omitempty"`
+	Constellation        *CurrentRelatedEntity `json:"constellation,omitempty"`
+	Region               *CurrentRelatedEntity `json:"region,omitempty"`
 	OwnerCap             *CurrentRelatedEntity `json:"ownerCap,omitempty"`
 	LocationHash         *CurrentRelatedEntity `json:"locationHash,omitempty"`
 	MemberCount          int                   `json:"memberCount,omitempty"`

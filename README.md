@@ -147,7 +147,7 @@ Windows:
 
 ## Common Workflows
 
-Most read APIs and indexer/importer commands default to the current cycle. As of this revision, that is Cycle 6. Use `-cycles all` or `-cycles 5,6` only when you deliberately want archive data; Cycle 5 tribe names and profile fields may remain unresolved without a Cycle 5 World API source artefact.
+Most read APIs and indexer/importer commands default to the current cycle. As of this revision, that is Cycle 6. Older cycle support has been removed from the public Registry path because the available evidence is incomplete and does not resolve enough public identity fields cleanly.
 
 Preview Sui package streams without network writes:
 ```sh

@@ -123,15 +123,12 @@ Those fixtures cover the common read shapes for current entities, semantic killm
 ## Cycle Scope
 List, search, current-state, event and killmail endpoints default to the current cycle. The current cycle is Cycle 6, which began at `2026-06-25T09:00:00Z`. The default scope also includes unlabelled compatibility rows so old static imports remain visible until they are reimported with a cycle stamp.
 
-Use `cycles=current` or `cycles=6` for strict Cycle 6 only. Use `cycles=all` when you deliberately want archive data or a comma-separated list such as `cycles=5,6` for an explicit mixed scope.
-
-Cycle 5 archive reads are available for historical comparison. Archive tribe ids may remain unresolved placeholders such as `Tribe 42` where the Registry has no complete Cycle 5 World API source artefact for those names.
+Use `cycles=current` or `cycles=6` for strict Cycle 6 only. Other cycle values are rejected. Older cycle support has been removed from public reads because the Registry does not have complete World API source artefacts for those public identity fields.
 
 Examples:
 ```sh
 curl -fsS "http://127.0.0.1:8080/v1/current/tribes?environment=stillness"
-curl -fsS "http://127.0.0.1:8080/v1/current/tribes?environment=stillness&cycles=all"
-curl -fsS "http://127.0.0.1:8080/v1/events?environment=stillness&cycles=5,6&module=character"
+curl -fsS "http://127.0.0.1:8080/v1/events?environment=stillness&cycles=6&module=character"
 ```
 
 ## Search
@@ -218,12 +215,12 @@ GET /v1/current/ownership
 GET /v1/current/route-edges
 ```
 
-`ownership` returns `owned_by` edges. `route-edges` returns `links_to` and `observed_between` edges. All current-state routes accept `environment`, `cycles`, `limit` and `cursor`.
+`ownership` returns `owned_by` edges. `route-edges` returns `links_to` and `observed_between` edges. All current-state routes accept `environment`, `cycles`, `limit` and `cursor`. `/v1/current/characters` defaults to `profile=known` so raw placeholder character ids do not dominate public reads; use `profile=placeholder` for diagnostics.
 
 Additional current-state filters:
 ```text
 q              text search over current entity id, slug, name and summary
-cycles         current, all, or comma-separated cycle numbers such as 5,6
+cycles         current or 6
 source_id      contributing source id recorded on current facts or relation edges
 profile        known or placeholder, based on sourced profile facts versus generated placeholder names
 tribe          character `belongs_to` tribe entity id

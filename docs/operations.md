@@ -100,7 +100,7 @@ registry:derive:sui-objects:<network>
 
 The cursor value is the opaque `endCursor` returned by Sui GraphQL. Do not edit or manufacture cursor values. Use `br-indexer -mode events -reset-cursors` only when intentionally replaying a stream.
 
-`br-indexer` defaults to the current cycle package scope. At the moment that means Cycle 6 package entries from the manifest. Use `-cycles all` or an explicit list such as `-cycles 5,6` for archive work. Cycle 5 remains useful for historical comparison, with tribe names, descriptions and URLs limited by the available Cycle 5 World API evidence.
+`br-indexer` defaults to the current cycle package scope. At the moment that means Cycle 6 package entries from the manifest. Older cycles are not part of the supported public Registry scope.
 
 Useful smoke commands:
 ```sh
@@ -138,13 +138,6 @@ go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.s
 ```
 
 Use a normal run without `-only-incomplete` for a quick append pass across every stream. Saved cursors are still used. A genesis replay requires `-reset-cursors`.
-
-Archive examples:
-```sh
-go run ./cmd/br-indexer -mode plan -manifest testdata/fixtures/sui-packages.stillness.json -cycles all
-go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -cycles 5,6 -only-incomplete -max-pages 0 -concurrency 64
-go run ./cmd/br-indexer -mode derive-events -cycles all -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
-```
 
 Audit Sui object targets that are currently marked as provider-range blocked when you need to show the exact provider-limited object types:
 ```sh

@@ -578,7 +578,7 @@ paths:
         - $ref: "#/components/parameters/Cycles"
         - name: cycle
           in: query
-          description: Legacy singular cycle filter. Prefer `cycles` for current/default/archive scope.
+          description: Legacy singular cycle filter. Prefer `cycles` for current/default scope.
           schema:
             type: integer
             minimum: 1
@@ -1363,13 +1363,12 @@ components:
     Cycles:
       name: cycles
       in: query
-      description: Cycle scope for list queries. Omit for the current cycle plus unlabelled compatibility rows, use `current` for the strict current cycle, use `all` to include archive rows, or pass comma-separated cycle numbers such as `5,6`. Cycle 5 archive rows may have unresolved tribe profile names unless a Cycle 5 World API source artefact has been imported.
+      description: Cycle scope for list queries. Omit for the current cycle plus unlabelled compatibility rows, or use `current` or `6` for strict Cycle 6 rows.
       schema:
         type: string
         examples:
           - current
-          - all
-          - "5,6"
+          - "6"
     TypeID:
       name: type_id
       in: query
@@ -1428,7 +1427,7 @@ components:
     ProfileState:
       name: profile
       in: query
-      description: Filter current records by whether they have a sourced profile or only a generated placeholder display name.
+      description: Filter current records by whether they have a sourced profile or only a generated placeholder display name. Character current-state reads default to `known`.
       schema:
         type: string
         enum: [known, placeholder]

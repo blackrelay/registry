@@ -32,5 +32,12 @@ func effectiveEventCycles(query EventQuery) []int {
 }
 
 func timeCycleInScope(value time.Time, cycleValues []int, includeUncycled bool) bool {
-	return cycleInScope(cycles.FromTime(value), cycleValues, includeUncycled)
+	if value.IsZero() {
+		return cycleInScope(nil, cycleValues, includeUncycled)
+	}
+	cycle := cycles.FromTime(value)
+	if cycle == nil && len(cycleValues) > 0 {
+		return false
+	}
+	return cycleInScope(cycle, cycleValues, includeUncycled)
 }

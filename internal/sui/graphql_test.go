@@ -198,8 +198,8 @@ func TestNormalizeMoveEventProducesRegistryEvent(t *testing.T) {
 	if event.OccurredAt.Format(time.RFC3339Nano) != "2026-05-27T18:12:12.879Z" {
 		t.Fatalf("unexpected occurredAt %s", event.OccurredAt)
 	}
-	if event.Cycle == nil || *event.Cycle != 5 {
-		t.Fatalf("expected cycle 5 from event timestamp, got %#v", event.Cycle)
+	if event.Cycle != nil {
+		t.Fatalf("pre-Cycle-6 timestamp should not be cycle-labelled, got %#v", event.Cycle)
 	}
 	encoded, err := json.Marshal(event.Payload)
 	if err != nil {

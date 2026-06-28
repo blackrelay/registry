@@ -32,8 +32,8 @@ if ($Full) {
 }
 
 $normalisedPublishPrefix = ($PublishPrefix -replace "\\", "/").Trim("/")
-if (($PublishLocal -or $PublishR2) -and $ExportCycles.Trim().ToLowerInvariant() -eq "all" -and $normalisedPublishPrefix -eq "registry/current") {
-  throw "Refusing to publish an all-cycle archive to registry/current. Pass -PublishPrefix registry/archive/all for archive publication."
+if ($ExportCycles.Trim().ToLowerInvariant() -eq "all") {
+  throw "Unsupported export cycle scope 'all'. Use current or 6."
 }
 
 function Invoke-Go {

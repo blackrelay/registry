@@ -139,14 +139,14 @@ func TestEventStreamTargetsFilterManifestPackagesByCycle(t *testing.T) {
 	targets, err = EventStreamTargets(manifest, TargetOptions{
 		Environment:    model.EnvironmentStillness,
 		Network:        "sui-testnet",
-		Cycles:         []int{5, 6},
+		Cycles:         []int{6},
 		NoModuleShards: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(targets) != 2 {
-		t.Fatalf("expected both archive and current targets, got %#v", targets)
+	if len(targets) != 1 || targets[0].PackageName != "cycle-6-world" {
+		t.Fatalf("unexpected current-only targets %#v", targets)
 	}
 }
 

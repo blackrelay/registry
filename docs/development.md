@@ -100,13 +100,12 @@ go run ./cmd/br-indexer -mode plan -manifest testdata/fixtures/sui-packages.stil
 
 Manifest package entries can carry `startingCheckpoint` for newly published Sui packages. The event planner turns that into an exclusive `afterCheckpoint` filter and a checkpoint-scoped cursor source. This is used for newly observed Stillness packages. Registry cycles are not inferred from package names; they are assigned from source timestamps when a source row has enough time evidence.
 
-Cycle boundary normalisation for indexed Sui rows currently emits only cycles present in the Sui-backed data:
+Cycle boundary normalisation for indexed Sui rows currently emits the supported public Registry cycle:
 ```text
-Cycle 5 starts 2026-03-11T09:00:00Z
 Cycle 6 starts 2026-06-25T09:00:00Z
 ```
 
-Raw Sui events receive a cycle from `occurred_at` when they fall in Cycle 5 or later. Event-derived entities and facts inherit that event cycle. Object-derived entities and facts use the object observation time. The current indexed Sui data contains Cycle 5 and Cycle 6 rows for this normaliser. Manual, observed and community imports use a null cycle until their own source proves a cycle.
+Raw Sui events receive a cycle from `occurred_at` when they fall in Cycle 6. Event-derived entities and facts inherit that event cycle. Object-derived entities and facts use the object observation time. Older Sui rows remain outside the supported public cycle scope. Manual, observed and community imports use a null cycle until their own source proves a supported cycle.
 
 Audit the manifest target set against saved cursors without making Sui GraphQL calls:
 ```sh
@@ -154,7 +153,7 @@ Audit saved manifest object targets that are currently marked as provider-range 
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-The primary Cycle 6 repair path is event backfill and module-scoped `derive-events` for chain-derived state. Storage-unit inventory rows include item mint, burn, destroy, deposit and withdraw actions, including the Cycle 6 v2 deposit/withdraw event shapes. These derive conservative item type placeholders, storage evidence and character action relations until static-client type imports provide names and categories. World API tribe/system snapshots provide public profile fields where those endpoints exist. Static-client imports provide systems, constellations, regions, enemies, type rows and reviewed recipes.
+The primary Cycle 6 repair path is event backfill and module-scoped `derive-events` for chain-derived state. Storage-unit inventory rows include item mint, burn, destroy, deposit and withdraw actions including the Cycle 6 v2 deposit/withdraw event shapes. These derive conservative item type placeholders, storage evidence and character action relations until static-client type imports provide names and categories. World API tribe/system snapshots provide public profile fields where those endpoints exist. Static-client imports provide systems, constellations, regions, enemies, type rows and reviewed recipes.
 
 Generate fixture-aware local quality reports after derivation:
 ```sh
@@ -190,7 +189,7 @@ For the current Cycle 6 package window, use the wrapper script for a bounded ref
 
 Use `--full` only for a deliberate complete append from saved package cursors. The script runs event and object backfills, derivation, Stillness package audit, killmail audit, current-state audit and the aggregate report.
 
-By default the script also generates a compact public export in a staging directory, verifies it, promotes it to the configured export path and writes `tmp/cycle6-refresh-summary.json`. Use `--summary-path` to change the summary artefact path. Use `--skip-export` for a repair-only run and `--export-cycles all` for an archive export. Use `--publish-local` or `--publish-r2` only after the verified export should be published to an object-store layout. The default publish prefix is `registry/current`; archive publication should pass `--export-cycles all --publish-prefix registry/archive/all`.
+By default the script also generates a compact public export in a staging directory, verifies it, promotes it to the configured export path and writes `tmp/cycle6-refresh-summary.json`. Use `--summary-path` to change the summary artefact path. Use `--skip-export` for a repair-only run. Use `--publish-local` or `--publish-r2` only after the verified export should be published to an object-store layout. The default publish prefix is `registry/current`.
 
 For an operator-friendly local proof path, use the bootstrap script:
 ```sh
@@ -229,12 +228,11 @@ Generate compact public distribution files with:
 go run ./cmd/br-export -out exports
 ```
 
-The default export drains current-cycle plus unlabelled rows through keyset pagination. Use `-cycles current` for strict current-cycle rows, `-cycles all` for an archive bundle or `-cycles 5,6` for an explicit multi-cycle bundle. Use `-limit 5000` for a bounded sample export.
+The default export drains current-cycle plus unlabelled rows through keyset pagination. Use `-cycles current` for strict current-cycle rows or `-limit 5000` for a bounded sample export.
 
 Raw indexed evidence exports are opt-in:
 ```sh
 go run ./cmd/br-export -out exports-raw -include-events -include-sui-objects -timeout 30m
-go run ./cmd/br-export -out exports-all -cycles all -include-events -include-sui-objects -timeout 30m
 ```
 
 Verify an export before publishing or syncing it:
@@ -247,14 +245,12 @@ Verification recomputes file SHA-256 values, byte sizes and row counts from `man
 Publish a verified export into a local object-store-shaped directory:
 ```sh
 go run ./cmd/br-export publish-local -dir exports -root published-exports -prefix registry/current
-go run ./cmd/br-export publish-local -dir exports-all -root published-exports -prefix registry/archive/all
-./scripts/verify-publication.sh --root published-exports --prefix registry/current,registry/archive/all
+./scripts/verify-publication.sh --root published-exports --prefix registry/current
 ```
 
 `publish-local` refuses invalid exports. For a valid export it writes immutable objects under:
 ```text
 registry/current/bundles/<bundle-id>/
-registry/archive/all/bundles/<bundle-id>/
 ```
 
 It writes each prefix's `latest/manifest.json` last. That latest object is a small pointer containing the bundle id, immutable manifest key, manifest SHA-256 and file list. This is the publication order used for R2 or S3-compatible storage.

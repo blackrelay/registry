@@ -92,20 +92,18 @@ go run ./cmd/br-export -out exports
 go run ./cmd/br-export verify -dir exports
 ```
 
-The default export scope is the current cycle plus unlabelled rows. Use `-cycles current` for a strict current-cycle bundle, `-cycles all` for an archive bundle or `-cycles 5,6` when you deliberately want both Cycle 5 and Cycle 6 records in one distribution snapshot:
+The default export scope is the current cycle plus unlabelled rows. Use `-cycles current` for a strict current-cycle bundle:
 ```sh
 go run ./cmd/br-export -out exports-current
-go run ./cmd/br-export -out exports-all -cycles all
 ```
 
 Publish locally or to R2 only after verification:
 ```sh
 go run ./cmd/br-export publish-local -dir exports -root published-exports -prefix registry/current
-go run ./cmd/br-export publish-local -dir exports-all -root published-exports -prefix registry/archive/all
-./scripts/verify-publication.sh --root published-exports --prefix registry/current,registry/archive/all
+./scripts/verify-publication.sh --root published-exports --prefix registry/current
 ```
 
-Use separate prefixes for current and archive exports. The current pointer lives at `registry/current/latest/manifest.json`; the archive pointer lives at `registry/archive/all/latest/manifest.json`. Each pointer references immutable bundle files under its own `bundles/<bundle-id>/` directory.
+The current pointer lives at `registry/current/latest/manifest.json`. It references immutable bundle files under its own `bundles/<bundle-id>/` directory.
 
 R2 publishing uses S3-compatible credentials. Do not put those credentials in source control.
 

@@ -241,19 +241,6 @@ func TestWritePublicExportAppliesCycleScope(t *testing.T) {
 	if manifest.CycleScope != "current" || len(manifest.Cycles) != 1 || manifest.Cycles[0] != 6 || !manifest.IncludeUncycled {
 		t.Fatalf("manifest did not record cycle scope: %#v", manifest)
 	}
-
-	allDir := t.TempDir()
-	allResult, err := WritePublicExport(context.Background(), store, allDir, ExportOptions{
-		CycleScope:        "all",
-		IncludeEvents:     true,
-		IncludeSuiObjects: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if allResult.EntityCount != 3 || allResult.KillmailCount != 2 || allResult.SourceCount != 3 || allResult.EventCount != 3 || allResult.SuiObjectCount != 2 {
-		t.Fatalf("unexpected all-cycle export counts: %#v", allResult)
-	}
 }
 
 func TestWritePublicExportManifestIncludesRawCorpusWatermarks(t *testing.T) {

@@ -308,21 +308,25 @@ func (s Server) currentEntities(entityType model.EntityType) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		profileState := firstNonEmpty(
+			r.URL.Query().Get("profile"),
+			r.URL.Query().Get("profile_state"),
+			r.URL.Query().Get("profileState"),
+		)
+		if entityType == model.EntityTypeCharacter && profileState == "" {
+			profileState = "known"
+		}
 		page, err := s.Store.ListCurrentEntities(r.Context(), db.CurrentEntityQuery{
 			Type:            entityType,
 			Environment:     requestEnvironment(r),
 			Cycles:          scope.Cycles,
 			IncludeUncycled: scope.IncludeUncycled,
 			Q:               r.URL.Query().Get("q"),
-			ProfileState: firstNonEmpty(
-				r.URL.Query().Get("profile"),
-				r.URL.Query().Get("profile_state"),
-				r.URL.Query().Get("profileState"),
-			),
-			TribeID:    firstNonEmpty(r.URL.Query().Get("tribe"), r.URL.Query().Get("tribe_id"), r.URL.Query().Get("tribeId")),
-			OwnerID:    firstNonEmpty(r.URL.Query().Get("owner"), r.URL.Query().Get("owner_id"), r.URL.Query().Get("ownerId")),
-			SystemID:   firstNonEmpty(r.URL.Query().Get("system"), r.URL.Query().Get("system_id"), r.URL.Query().Get("systemId")),
-			OwnerCapID: firstNonEmpty(r.URL.Query().Get("owner_cap"), r.URL.Query().Get("owner_cap_id"), r.URL.Query().Get("ownerCap"), r.URL.Query().Get("ownerCapId")),
+			ProfileState:    profileState,
+			TribeID:         firstNonEmpty(r.URL.Query().Get("tribe"), r.URL.Query().Get("tribe_id"), r.URL.Query().Get("tribeId")),
+			OwnerID:         firstNonEmpty(r.URL.Query().Get("owner"), r.URL.Query().Get("owner_id"), r.URL.Query().Get("ownerId")),
+			SystemID:        firstNonEmpty(r.URL.Query().Get("system"), r.URL.Query().Get("system_id"), r.URL.Query().Get("systemId")),
+			OwnerCapID:      firstNonEmpty(r.URL.Query().Get("owner_cap"), r.URL.Query().Get("owner_cap_id"), r.URL.Query().Get("ownerCap"), r.URL.Query().Get("ownerCapId")),
 			LocationHash: firstNonEmpty(
 				r.URL.Query().Get("location_hash"),
 				r.URL.Query().Get("locationHash"),

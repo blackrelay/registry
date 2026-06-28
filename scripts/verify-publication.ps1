@@ -1,6 +1,6 @@
 param(
   [string]$Root = "published-exports",
-  [string[]]$Prefix = @("registry/current", "registry/archive/all")
+  [string[]]$Prefix = @("registry/current")
 )
 
 $ErrorActionPreference = "Stop"

@@ -49,6 +49,45 @@ func TestDeriveCurrentEntityExposesEvidenceOnlyOwnerCapAndLocationHash(t *testin
 	}
 }
 
+func TestDeriveCurrentEntityExposesStaticUniverseHierarchy(t *testing.T) {
+	item := model.CurrentEntity{
+		Entity: model.Entity{
+			ID:          "system:stillness:30001001",
+			Type:        model.EntityTypeSystem,
+			Environment: model.EnvironmentStillness,
+		},
+		OutgoingRelations: []model.CurrentRelation{
+			{
+				SubjectEntityID:   "system:stillness:30001001",
+				Predicate:         "located_in",
+				ObjectEntityID:    "constellation:stillness:20000001",
+				ObjectEntityType:  model.EntityTypeConstellation,
+				ObjectDisplayName: "C-20000001",
+				SubjectEntityType: model.EntityTypeSystem,
+			},
+			{
+				SubjectEntityID:   "system:stillness:30001001",
+				Predicate:         "member_of_region",
+				ObjectEntityID:    "region:stillness:10000001",
+				ObjectEntityType:  model.EntityTypeRegion,
+				ObjectDisplayName: "000-0Y-0",
+			},
+		},
+	}
+
+	deriveCurrentEntity(&item)
+
+	if item.Derived == nil {
+		t.Fatal("expected derived static universe state")
+	}
+	if item.Derived.Constellation == nil || item.Derived.Constellation.DisplayName != "C-20000001" {
+		t.Fatalf("constellation was not exposed: %#v", item.Derived)
+	}
+	if item.Derived.Region == nil || item.Derived.Region.DisplayName != "000-0Y-0" {
+		t.Fatalf("region was not exposed: %#v", item.Derived)
+	}
+}
+
 func TestCurrentEntityMatchesProfileAndEvidenceBooleanFilters(t *testing.T) {
 	withProfile := model.CurrentEntity{
 		Entity: model.Entity{

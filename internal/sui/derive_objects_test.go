@@ -96,7 +96,7 @@ func TestDeriveEntityFromCharacterObjectUsesNestedMetadataName(t *testing.T) {
 	}
 }
 
-func TestDeriveEntityFromObjectAssignsObservedCycle(t *testing.T) {
+func TestDeriveEntityFromObjectLeavesPreCurrentCycleUnlabelled(t *testing.T) {
 	object := db.SuiObjectRecord{
 		ID:          "object:0xcycle5:7",
 		ObjectID:    "0xcycle5",
@@ -124,11 +124,11 @@ func TestDeriveEntityFromObjectAssignsObservedCycle(t *testing.T) {
 	if !ok {
 		t.Fatal("object was not derived")
 	}
-	if derived.Entity.Cycle == nil || *derived.Entity.Cycle != 5 {
-		t.Fatalf("expected object-derived entity cycle 5, got %#v", derived.Entity.Cycle)
+	if derived.Entity.Cycle != nil {
+		t.Fatalf("pre-Cycle-6 object should not be cycle-labelled, got %#v", derived.Entity.Cycle)
 	}
-	if !hasFactCycle(derived.Facts, "character_id", 5) {
-		t.Fatalf("expected character_id fact to carry cycle 5, got %#v", derived.Facts)
+	if hasFactCycle(derived.Facts, "character_id", 5) {
+		t.Fatalf("character_id fact should not carry Cycle 5, got %#v", derived.Facts)
 	}
 }
 

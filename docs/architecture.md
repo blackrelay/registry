@@ -52,7 +52,7 @@ The current implementation focus is the indexer and canonical data pipeline. Pub
 
 `migrations/0008_cycle_normalisation.sql` adds nullable cycle storage for raw events and indexes environment/cycle/event-time queries.
 
-`migrations/0009_backfill_event_cycles.sql` backfills raw event cycles from `occurred_at` for Cycle 5 and later.
+`migrations/0009_backfill_event_cycles.sql` originally backfilled raw event cycles from `occurred_at`. Current public normalisation only emits supported Cycle 6 labels.
 
 `migrations/0010_remove_pre_cycle5_labels.sql` removes pre-Cycle-5 labels from raw events, entities and facts. The current Sui-backed corpus has no Cycle 4 event rows, so earlier cycle labels are left null until a separate historical source model needs them.
 
@@ -82,4 +82,4 @@ Character event derivation records public metadata `name`, `description` and `ur
 
 The indexer records raw event/object JSON and chain metadata first. Domain-specific derivation can be replayed from stored rows rather than hidden inside network fetching.
 
-Cycle values on raw Sui events are derived from the event timestamp for Cycle 5 and later. Event-derived entities and facts inherit that cycle. Object-derived entities and facts use the object observation time. Cycle values remain null until the source row proves a supported boundary.
+Cycle values on raw Sui events are derived from the event timestamp for supported public boundaries. Event-derived entities and facts inherit that cycle. Object-derived entities and facts use the object observation time. Cycle values remain null until the source row proves a supported boundary.
