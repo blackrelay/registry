@@ -241,6 +241,70 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 	}
 }
 
+func TestDedupeCurrentTribeIdentitiesPrefersNamedProfileRow(t *testing.T) {
+	now := time.Date(2026, 6, 28, 10, 30, 45, 0, time.UTC)
+	items := []model.CurrentEntity{
+		{
+			Entity: model.Entity{
+				ID:          "tribe:stillness:1000167",
+				Type:        model.EntityTypeTribe,
+				Name:        "Clonebank 86",
+				DisplayName: "Clonebank 86",
+				Environment: model.EnvironmentStillness,
+				Cycle:       intPtr(6),
+				UpdatedAt:   now,
+			},
+			Facts: map[string]any{
+				"tribe_id": "1000167",
+				"tag":      "CO86",
+			},
+			SourceIDs: []string{"source:world-api:tribes"},
+		},
+		{
+			Entity: model.Entity{
+				ID:          "tribe:liminality:1000167",
+				Type:        model.EntityTypeTribe,
+				Name:        "Tribe 1000167",
+				DisplayName: "Tribe 1000167",
+				Environment: model.EnvironmentStillness,
+				Cycle:       intPtr(6),
+				UpdatedAt:   now.Add(-time.Hour),
+			},
+			Facts: map[string]any{
+				"tribe_id":           "1000167",
+				"source_event_kind":  "character.created",
+				"transaction_digest": "ZEXV842KCQhXa3jhynE6EbYpigUZ88Q9amEfMKpa9e4",
+			},
+			IncomingRelations: []model.CurrentRelation{{
+				ID:                 "relation:character:liminality:2112000001:belongs_to:tribe:liminality:1000167",
+				SubjectEntityID:    "character:liminality:2112000001",
+				SubjectEntityType:  model.EntityTypeCharacter,
+				SubjectDisplayName: "fingolfin",
+				Predicate:          "belongs_to",
+				ObjectEntityID:     "tribe:liminality:1000167",
+				ObjectEntityType:   model.EntityTypeTribe,
+				ObjectDisplayName:  "Tribe 1000167",
+			}},
+			SourceIDs: []string{"source:sui:sui-testnet:graphql"},
+		},
+	}
+
+	deduped := dedupeCurrentEntities(items, CurrentEntityQuery{Type: model.EntityTypeTribe})
+
+	if len(deduped) != 1 {
+		t.Fatalf("expected one current tribe identity, got %#v", deduped)
+	}
+	if deduped[0].Entity.ID != "tribe:stillness:1000167" || deduped[0].Entity.DisplayName != "Clonebank 86" {
+		t.Fatalf("expected named World API row to win, got %#v", deduped[0].Entity)
+	}
+	if deduped[0].Facts["source_event_kind"] != "character.created" {
+		t.Fatalf("event evidence was not retained: %#v", deduped[0].Facts)
+	}
+	if !containsString(deduped[0].SourceIDs, "source:world-api:tribes") || !containsString(deduped[0].SourceIDs, "source:sui:sui-testnet:graphql") {
+		t.Fatalf("source evidence was not merged: %#v", deduped[0].SourceIDs)
+	}
+}
+
 func TestMemoryCurrentSystemUpgradesPlaceholderToStaticName(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()

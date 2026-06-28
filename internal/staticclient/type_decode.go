@@ -95,7 +95,7 @@ func DecodeStaticClientTypeFile(ctx context.Context, opts StaticTypeDecodeOption
 		rows = append(rows, StaticTypeDecodedRow{
 			TypeID:      row.TypeID,
 			GroupID:     row.GroupID,
-			Name:        repairStaticClientText(strings.TrimSpace(row.Name)),
+			Name:        repairStaticClientName(strings.TrimSpace(row.Name)),
 			TypeNameID:  row.TypeNameID,
 			WreckTypeID: row.WreckTypeID,
 			OffsetBytes: row.OffsetBytes,

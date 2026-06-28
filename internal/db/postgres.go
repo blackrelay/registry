@@ -917,7 +917,7 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 		  THEN 0 ELSE 1 END ASC, e.updated_at DESC, e.id DESC`
 	}
 	fetchLimit := limit + 1
-	if query.Type == model.EntityTypeCharacter {
+	if query.Type == model.EntityTypeCharacter || query.Type == model.EntityTypeTribe {
 		fetchLimit = limit*4 + 1
 	}
 	args = append(args, fetchLimit)

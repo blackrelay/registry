@@ -200,7 +200,7 @@ func normaliseRecipeRows(rows []staticRecipeRow) []staticRecipeRow {
 		if row.OutputTypeID <= 0 || strings.TrimSpace(row.Name) == "" {
 			continue
 		}
-		row.Name = repairStaticClientText(strings.TrimSpace(row.Name))
+		row.Name = repairStaticClientName(strings.TrimSpace(row.Name))
 		row.RecipeID = strings.TrimSpace(row.RecipeID)
 		if row.RecipeID == "" {
 			row.RecipeID = fmt.Sprintf("type:%d", row.OutputTypeID)

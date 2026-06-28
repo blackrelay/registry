@@ -295,7 +295,7 @@ func staticClientTypeNameMap(ctx context.Context, clientRoot string) (map[int]st
 	names := make(map[int]string)
 	for _, row := range DecodeFSDBinaryTypeRows(ctx, typeData, DecodeLocalizationStrings(locData)) {
 		if row.TypeID > 0 && strings.TrimSpace(row.Name) != "" {
-			names[row.TypeID] = repairStaticClientText(strings.TrimSpace(row.Name))
+			names[row.TypeID] = repairStaticClientName(strings.TrimSpace(row.Name))
 		}
 	}
 	if len(names) == 0 {

@@ -230,30 +230,59 @@ func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery
 	}
 	out := make([]model.CurrentEntity, 0, len(items))
 	characterIndexes := make(map[string]int)
+	tribeIndexes := make(map[string]int)
 	changed := false
 	for _, item := range items {
-		key := currentCharacterIdentityKey(item)
-		if key == "" {
+		if key := currentCharacterIdentityKey(item); key != "" {
+			if index, ok := characterIndexes[key]; ok {
+				changed = true
+				existing := out[index]
+				if preferCurrentCharacterIdentity(item, existing) {
+					out[index] = mergeCurrentIdentityRows(item, existing)
+				} else {
+					out[index] = mergeCurrentIdentityRows(existing, item)
+				}
+				continue
+			}
+			characterIndexes[key] = len(out)
 			out = append(out, item)
 			continue
 		}
-		if index, ok := characterIndexes[key]; ok {
-			changed = true
-			existing := out[index]
-			if preferCurrentCharacterIdentity(item, existing) {
-				out[index] = mergeCurrentIdentityRows(item, existing)
-			} else {
-				out[index] = mergeCurrentIdentityRows(existing, item)
+		if key := currentTribeIdentityKey(item); key != "" {
+			if index, ok := tribeIndexes[key]; ok {
+				changed = true
+				existing := out[index]
+				if preferCurrentTribeIdentity(item, existing) {
+					out[index] = mergeCurrentTribeIdentityRows(item, existing)
+				} else {
+					out[index] = mergeCurrentTribeIdentityRows(existing, item)
+				}
+				continue
 			}
+			tribeIndexes[key] = len(out)
+			out = append(out, item)
 			continue
 		}
-		characterIndexes[key] = len(out)
 		out = append(out, item)
 	}
 	if !changed {
 		return items
 	}
 	return out
+}
+
+func currentTribeIdentityKey(item model.CurrentEntity) string {
+	if item.Entity.Type != model.EntityTypeTribe {
+		return ""
+	}
+	tribeID := strings.TrimSpace(fmt.Sprint(item.Facts["tribe_id"]))
+	if tribeID == "" || tribeID == "<nil>" {
+		tribeID = tribeIdentityToken(item.Entity.ID)
+	}
+	if tribeID == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s:%s", item.Entity.Environment, tribeID)
 }
 
 func currentCharacterIdentityKey(item model.CurrentEntity) string {
@@ -272,6 +301,42 @@ func currentCharacterIdentityKey(item model.CurrentEntity) string {
 		return ""
 	}
 	return fmt.Sprintf("%s:%s:%s", item.Entity.Environment, address, name)
+}
+
+func preferCurrentTribeIdentity(candidate, existing model.CurrentEntity) bool {
+	candidateScore := currentTribeIdentityScore(candidate)
+	existingScore := currentTribeIdentityScore(existing)
+	if candidateScore != existingScore {
+		return candidateScore > existingScore
+	}
+	if !candidate.Entity.UpdatedAt.Equal(existing.Entity.UpdatedAt) {
+		return candidate.Entity.UpdatedAt.After(existing.Entity.UpdatedAt)
+	}
+	return candidate.Entity.ID > existing.Entity.ID
+}
+
+func currentTribeIdentityScore(item model.CurrentEntity) int {
+	score := 0
+	tribeID := strings.TrimSpace(fmt.Sprint(item.Facts["tribe_id"]))
+	if tribeID == "" || tribeID == "<nil>" {
+		tribeID = tribeIdentityToken(item.Entity.ID)
+	}
+	name := strings.TrimSpace(nonEmpty(item.Entity.DisplayName, item.Entity.Name))
+	if name != "" && name != "Tribe "+tribeID {
+		score += 1000
+	}
+	for _, key := range []string{"tag", "aliases", "description", "url"} {
+		if hasNonEmptyFact(item, key) {
+			score += 25
+		}
+	}
+	if entityScope(item.Entity.ID) == string(item.Entity.Environment) {
+		score += 10
+	}
+	if item.Entity.Cycle != nil {
+		score += *item.Entity.Cycle
+	}
+	return score
 }
 
 func preferCurrentCharacterIdentity(candidate, existing model.CurrentEntity) bool {
@@ -307,6 +372,25 @@ func hasEventBackedCharacterEvidence(item model.CurrentEntity) bool {
 	return hasNonEmptyFact(item, "source_event_kind") ||
 		hasNonEmptyFact(item, "source_event_id") ||
 		hasNonEmptyFact(item, "transaction_digest")
+}
+
+func mergeCurrentTribeIdentityRows(winner, loser model.CurrentEntity) model.CurrentEntity {
+	merged := winner
+	merged.Facts = mergeCurrentFacts(winner.Facts, loser.Facts)
+	merged.SourceIDs = mergeSourceIDs(winner.SourceIDs, loser.SourceIDs)
+	winningTribeToken := tribeIdentityToken(winner.Entity.ID)
+	merged.OutgoingRelations = mergeCurrentRelations(winner.OutgoingRelations, loser.OutgoingRelations, func(relation model.CurrentRelation) bool {
+		return relation.SubjectEntityID == winner.Entity.ID
+	})
+	merged.IncomingRelations = mergeCurrentRelations(winner.IncomingRelations, loser.IncomingRelations, func(relation model.CurrentRelation) bool {
+		if relation.ObjectEntityID == winner.Entity.ID {
+			return true
+		}
+		return relation.ObjectEntityType == model.EntityTypeTribe && tribeIdentityToken(relation.ObjectEntityID) == winningTribeToken
+	})
+	merged.Derived = nil
+	deriveCurrentEntity(&merged)
+	return merged
 }
 
 func mergeCurrentIdentityRows(winner, loser model.CurrentEntity) model.CurrentEntity {
@@ -436,6 +520,14 @@ func tribeIdentityToken(value string) string {
 		value = value[index+1:]
 	}
 	return strings.TrimSpace(value)
+}
+
+func entityScope(value string) string {
+	parts := strings.Split(value, ":")
+	if len(parts) < 3 {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
 }
 
 func hasRelationInEitherDirection(item model.CurrentEntity, predicates map[string]struct{}, relatedID string) bool {

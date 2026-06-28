@@ -75,6 +75,28 @@ func TestImportTypesClassifiesFromStableGroupAndCategoryMetadata(t *testing.T) {
 	}
 }
 
+func TestImportTypesTrimsStaticClientNameWrapperQuotes(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "static-client-types.json")
+	writeFixture(t, path, `{
+		"candidates": [
+			{"groupId":9003,"name":"'Analytical Mind'","typeId":3001}
+		]
+	}`)
+	store := db.NewMemoryStore()
+	_, err := ImportTypes(context.Background(), store, artefacts.LocalStore{Root: filepath.Join(dir, "artefacts")}, path, TypeImportOptions{
+		Environment:     model.EnvironmentStillness,
+		AllowedRootDirs: []string{dir},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entity := store.Entities["item:stillness:type:3001"]
+	if entity.Name != "Analytical Mind" || entity.DisplayName != "Analytical Mind" {
+		t.Fatalf("static-client wrapper quotes were not trimmed: %#v", entity)
+	}
+}
+
 func assertStaticTypeEntity(t *testing.T, store *db.MemoryStore, id string, entityType model.EntityType) {
 	t.Helper()
 	entity := store.Entities[id]

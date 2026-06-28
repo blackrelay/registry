@@ -240,7 +240,7 @@ func normaliseStaticTypeRows(rows []staticTypeRow) []staticTypeRow {
 			continue
 		}
 		seen[row.TypeID] = struct{}{}
-		row.Name = repairStaticClientText(strings.TrimSpace(row.Name))
+		row.Name = repairStaticClientName(strings.TrimSpace(row.Name))
 		row.Description = repairStaticClientText(strings.TrimSpace(row.Description))
 		row.GroupName = repairStaticClientText(strings.TrimSpace(row.GroupName))
 		row.CategoryName = repairStaticClientText(strings.TrimSpace(row.CategoryName))
@@ -271,6 +271,24 @@ func repairStaticClientText(value string) string {
 		runes[i] = ' '
 	}
 	return strings.Join(strings.Fields(string(runes)), " ")
+}
+
+func repairStaticClientName(value string) string {
+	value = repairStaticClientText(value)
+	for {
+		trimmed := strings.TrimSpace(value)
+		if len(trimmed) < 2 {
+			return trimmed
+		}
+		runes := []rune(trimmed)
+		first := runes[0]
+		last := runes[len(runes)-1]
+		if (first == '\'' && last == '\'') || (first == '’' && last == '’') {
+			value = string(runes[1 : len(runes)-1])
+			continue
+		}
+		return trimmed
+	}
 }
 
 func isStaticTextWordRune(r rune) bool {
