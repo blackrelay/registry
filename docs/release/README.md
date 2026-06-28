@@ -10,19 +10,87 @@
 
 </div>
 
-Black Relay Registry releases are built by `.github/workflows/release.yml`. The workflow verifies the repository, builds command archives, writes checksum manifests, signs those manifests with the release PGP key and optionally publishes a GitHub release.
+Black Relay Registry releases are built by `.github/workflows/release.yml`.
+- [Release Notes](#release-notes)
+- [Release Files](#release-files)
+- [Integrity Assets](#integrity-assets)
+- [Release Signing](#release-signing)
+- [Release Provenance](#release-provenance)
+- [Publishing](#publishing)
+- [Verification](#verification)
 
-## Signing Material
+# Release Notes
 
-Keep private signing material outside the repository. Store it in operator-managed private storage with restrictive file permissions and back it up through the operator's normal secret-management process.
+Each release has a checked-in note at `docs/release/<version>.md`.
 
-The release workflow needs one dedicated PGP key for release artefact signing. Export the private key as ASCII armour and store it as a GitHub secret. Store the passphrase separately as a second secret. Store the public fingerprint as a GitHub variable so the workflow can verify that the expected key was imported.
+The checked-in note:
+- does not start with `# Black Relay Registry <version>` because the GitHub release title supplies that heading;
+- contains editorial release content such as highlights, security notes and operator notes;
+- contains `<!-- changelog: do not remove this line or add a changelog -->` where the generated changelog should begin.
 
-Do not commit private keys, passphrases, deployment SSH keys or local Git identity configuration.
+The release workflow publishes a GitHub release body by:
+- prepending one line of download and verification badges using Black Relay colours;
+- adding a short release-file and checksum verification note;
+- copying the checked-in release note until the changelog marker;
+- appending a generated `## Changelog` section from Git history.
 
-## GitHub Secrets And Variables
+# Release Files
 
-Set these in the repository or release environment before publishing a release:
+Primary files are direct `br-registry` server binaries:
+
+File | Description
+:--- | :---
+[`br-registry_windows_amd64.exe`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_amd64.exe) | Windows x64 API server binary
+[`br-registry_linux_amd64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_amd64) | Linux x64 API server binary
+[`br-registry_darwin_arm64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_arm64) | macOS Apple Silicon API server binary
+
+Alternative direct server binaries:
+
+File | Description
+:--- | :---
+[`br-registry_windows_arm64.exe`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_windows_arm64.exe) | Windows Arm64 API server binary
+[`br-registry_linux_arm64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_linux_arm64) | Linux Arm64 API server binary
+[`br-registry_darwin_amd64`](https://github.com/blackrelay/registry/releases/latest/download/br-registry_darwin_amd64) | macOS Intel API server binary
+
+Command bundles include all Registry commands:
+- `br-export`
+- `br-import`
+- `br-indexer`
+- `br-migrate`
+- `br-registry`
+
+Bundle | Description
+:--- | :---
+[`blackrelay-registry_linux_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_linux_amd64.tar.gz) | Linux x64 command bundle
+[`blackrelay-registry_linux_arm64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_linux_arm64.tar.gz) | Linux Arm64 command bundle
+[`blackrelay-registry_windows_amd64.zip`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_windows_amd64.zip) | Windows x64 command bundle
+[`blackrelay-registry_windows_arm64.zip`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_windows_arm64.zip) | Windows Arm64 command bundle
+[`blackrelay-registry_darwin_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_darwin_amd64.tar.gz) | macOS Intel command bundle
+[`blackrelay-registry_darwin_arm64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_darwin_arm64.tar.gz) | macOS Apple Silicon command bundle
+[`blackrelay-registry_freebsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_freebsd_amd64.tar.gz) | FreeBSD x64 command bundle
+[`blackrelay-registry_openbsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_openbsd_amd64.tar.gz) | OpenBSD x64 command bundle
+[`blackrelay-registry_netbsd_amd64.tar.gz`](https://github.com/blackrelay/registry/releases/latest/download/blackrelay-registry_netbsd_amd64.tar.gz) | NetBSD x64 command bundle
+
+Each command bundle also includes `README.md`, `LICENSE`, `openapi/registry.v1.yaml` and JSON contract files from `contracts/`.
+
+# Integrity Assets
+
+Each release attaches:
+- `SHA2-256SUMS`
+- `SHA2-256SUMS.sig`
+- `SHA2-512SUMS`
+- `SHA2-512SUMS.sig`
+- `public.key`
+
+The checksum manifests cover every direct binary and command bundle. Black Relay signs checksum manifests rather than every binary file. This keeps the release asset list smaller while still covering each file listed in the manifests.
+
+# Release Signing
+
+Black Relay Registry uses a maintainer-controlled OpenPGP release key for checksum manifest signatures.
+
+The public key attached to a GitHub release is a convenience copy. It is not the trust root by itself. Compare its fingerprint with a maintainer-controlled channel before trusting release signatures.
+
+The release workflow expects:
 ```text
 Secret:   RELEASE_SIGNING_PRIVATE_KEY
 Value:    ASCII-armoured private PGP key used only for release manifest signing
@@ -34,70 +102,45 @@ Variable: RELEASE_SIGNING_KEY_FINGERPRINT
 Value:    uppercase fingerprint of the release signing key
 ```
 
-The workflow exports the matching public key as `public.key` for consumers.
+Do not commit private keys, passphrases, deployment SSH keys or local Git identity configuration.
 
-## Release Assets
+# Release Provenance
 
-The release asset builder produces command archives for:
-- Linux amd64 and arm64
-- Windows amd64 and arm64
-- macOS amd64 and arm64
-- FreeBSD amd64
-- OpenBSD amd64
-- NetBSD amd64
+The current release flow provides GitHub workflow provenance through the release workflow run and signed checksum manifests. It does not currently publish GitHub artefact attestations, SLSA provenance bundles or SBOM files.
 
-Each platform archive includes `README.md`, the Apache-2.0 licence file, `openapi/registry.v1.yaml` and JSON contract files from `contracts/`.
+Do not describe Registry release artefacts as reproducible, vulnerability-free or reviewed by a human unless that has been separately verified for the specific release.
 
-The workflow writes:
-```text
-SHA2-256SUMS
-SHA2-256SUMS.sig
-SHA2-512SUMS
-SHA2-512SUMS.sig
-public.key
-```
-
-`public.key` is the exported release signing public key. The `.sig` files are detached ASCII-armoured PGP signatures over the checksum manifests.
-
-Archive names use this pattern:
-
-Platform | Archive name
-:--- | :---
-Linux amd64 | `blackrelay-registry_<version>_linux_amd64.tar.gz`
-Linux arm64 | `blackrelay-registry_<version>_linux_arm64.tar.gz`
-Windows amd64 | `blackrelay-registry_<version>_windows_amd64.zip`
-Windows arm64 | `blackrelay-registry_<version>_windows_arm64.zip`
-macOS amd64 | `blackrelay-registry_<version>_darwin_amd64.tar.gz`
-macOS arm64 | `blackrelay-registry_<version>_darwin_arm64.tar.gz`
-FreeBSD amd64 | `blackrelay-registry_<version>_freebsd_amd64.tar.gz`
-OpenBSD amd64 | `blackrelay-registry_<version>_openbsd_amd64.tar.gz`
-NetBSD amd64 | `blackrelay-registry_<version>_netbsd_amd64.tar.gz`
-
-## Manual Dry Run
-
-Run the release workflow manually with `publish` set to `false` to verify the full release build and upload the generated assets as a workflow artefact. The signing secrets are still required because the dry run signs the manifests in the same way as a published release.
-
-## Publishing
+# Publishing
 
 Manual publishing requires:
-- `version`, for example `v0.1.0` or `v0.1.0-rc.1`
-- `target`, usually `main` or a full commit SHA
-- `publish` set to `true`
+- `version`, for example `v1.0.0` or `v1.0.0-rc.1`;
+- `target`, usually `main` or a full commit SHA;
+- `publish` set to `true`.
 
 If the version tag does not exist, the workflow creates an annotated tag at the verified target commit before publishing the GitHub release.
 
 Pushing a tag matching `v*` also runs the release workflow. Tags with a prerelease suffix such as `-rc.1` are marked as prereleases.
 
-## Version Notes
-- [v1.0.0](v1.0.0.md): first Registry release notes and verification instructions.
+Run the workflow with `publish` set to `false` for a dry run. The dry run still builds assets and signs manifests because it should exercise the same release path as publication.
 
-## Verification
+# Verification
 
-Consumers can verify a downloaded archive with:
+Verify downloaded files after importing the release public key:
 ```sh
-gpg --import public.key
-gpg --verify SHA2-256SUMS.sig SHA2-256SUMS
-sha256sum -c SHA2-256SUMS
+gpg --import ./public.key
+gpg --verify ./SHA2-256SUMS.sig ./SHA2-256SUMS
+sha256sum -c ./SHA2-256SUMS --ignore-missing
 ```
 
-The `sha256sum -c` command verifies every archive listed in the manifest. To check one archive manually, compare its digest against the matching line in the verified manifest.
+Windows:
+```powershell
+gpg --import .\public.key
+gpg --verify .\SHA2-256SUMS.sig .\SHA2-256SUMS
+(Get-FileHash .\br-registry_windows_amd64.exe -Algorithm SHA256).Hash.ToLower()
+Select-String -Path .\SHA2-256SUMS -Pattern "br-registry_windows_amd64.exe"
+```
+
+The Windows example compares one downloaded file. The Linux example can verify every downloaded file present in the working directory.
+
+# Version Notes
+- [v1.0.0](v1.0.0.md): first Registry release notes and verification instructions.
