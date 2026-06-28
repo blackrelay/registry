@@ -37,6 +37,8 @@ func main() {
 		importWorldTribes(os.Args[2:])
 	case "static-universe":
 		importStaticUniverse(os.Args[2:])
+	case "static-client-decode-universe":
+		decodeStaticClientUniverse(os.Args[2:])
 	case "static-client-extract-types":
 		extractStaticClientTypes(os.Args[2:])
 	case "static-client-decode-types":
@@ -140,6 +142,49 @@ func extractStaticClientTypes(args []string) {
 
 func decodeStaticClientTypes(args []string) {
 	os.Exit(runStaticClientDecodeTypes(args, os.Stdout, os.Stderr))
+}
+
+func decodeStaticClientUniverse(args []string) {
+	os.Exit(runStaticClientDecodeUniverse(args, os.Stdout, os.Stderr))
+}
+
+func runStaticClientDecodeUniverse(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("static-client-decode-universe", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	clientPath := flags.String("client-path", "", "installed EVE Frontier client root containing resfileindex files")
+	outputDir := flags.String("out", "", "output static-universe extraction directory")
+	environment := flags.String("environment", string(model.EnvironmentStillness), "registry environment")
+	clientBuild := flags.String("client-build", "", "client build label from the extraction source")
+	patchLabel := flags.String("patch-label", "", "patch label or operator label for this extraction")
+	if err := flags.Parse(args); err != nil {
+		return 2
+	}
+	if strings.TrimSpace(*clientPath) == "" {
+		fmt.Fprintln(stderr, "-client-path is required")
+		return 2
+	}
+	if strings.TrimSpace(*outputDir) == "" {
+		fmt.Fprintln(stderr, "-out is required")
+		return 2
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	result, err := staticclient.DecodeStaticClientUniverseFiles(ctx, staticclient.StaticUniverseDecodeOptions{
+		ClientRoot:  *clientPath,
+		OutputDir:   *outputDir,
+		Environment: model.Environment(*environment),
+		ClientBuild: *clientBuild,
+		PatchLabel:  *patchLabel,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "decode static-client universe rows: %v\n", err)
+		return 1
+	}
+	if err := writeJSONTo(stdout, result); err != nil {
+		fmt.Fprintf(stderr, "write JSON: %v\n", err)
+		return 1
+	}
+	return 0
 }
 
 func compareStaticClientTypes(args []string) {
@@ -887,7 +932,7 @@ func writeJSONTo(w io.Writer, value any) error {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: br-import <datahub-types|world-systems|world-tribes|static-universe|static-client-extract-types|static-client-decode-types|static-client-compare-types|static-client-extract-production|static-client-decode-production|static-client-compare-production|static-client-summarise-production|static-client-inspect-types|static-client-types|static-client-recipes|static-client-enemies|static-enemies|static-enemies-jsonl|tribe-identities|killmail-fixture> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: br-import <datahub-types|world-systems|world-tribes|static-universe|static-client-decode-universe|static-client-extract-types|static-client-decode-types|static-client-compare-types|static-client-extract-production|static-client-decode-production|static-client-compare-production|static-client-summarise-production|static-client-inspect-types|static-client-types|static-client-recipes|static-client-enemies|static-enemies|static-enemies-jsonl|tribe-identities|killmail-fixture> [flags]")
 }
 
 func printSnapshotResult(result snapshots.PipelineResult) {

@@ -62,6 +62,47 @@ func TestWritePublicExportWritesCatalogAndJSONLFiles(t *testing.T) {
 	}
 }
 
+func TestWritePublicExportIncludesSemanticKillmailFields(t *testing.T) {
+	store := db.NewMemoryStore()
+	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
+	store.Sources["source:fixture"] = model.Source{ID: "source:fixture", Kind: model.SourceKindSuiEvent, Title: "Fixture", Locator: "fixture", Environment: model.EnvironmentStillness, CreatedAt: now}
+	store.Entities["system:stillness:30001001"] = model.Entity{ID: "system:stillness:30001001", Slug: "system-30001001-stillness", Type: model.EntityTypeSystem, Name: "ILC-7R7", DisplayName: "ILC-7R7", Environment: model.EnvironmentStillness, UpdatedAt: now}
+	store.Entities["character:stillness:victim"] = model.Entity{ID: "character:stillness:victim", Slug: "victim-stillness", Type: model.EntityTypeCharacter, Name: "Victim Pilot", DisplayName: "Victim Pilot", Environment: model.EnvironmentStillness, UpdatedAt: now}
+	store.Entities["enemy:stillness:type:92096"] = model.Entity{ID: "enemy:stillness:type:92096", Slug: "enemy-caird-92096-stillness", Type: model.EntityTypeEnemy, Name: "Caird", DisplayName: "Caird [NPC]", Environment: model.EnvironmentStillness, UpdatedAt: now}
+	if err := store.UpsertKillmail(context.Background(), model.KillmailRaw{
+		ID:                "killmail:stillness:310",
+		Environment:       model.EnvironmentStillness,
+		OccurredAt:        now,
+		SystemID:          "system:stillness:30001001",
+		VictimCharacterID: "character:stillness:victim",
+		KillerTypeID:      "92096",
+		SourceIDs:         []string{"source:fixture"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if _, err := WritePublicExport(context.Background(), store, dir, ExportOptions{Limit: 100}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "killmails.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var row killmailExportRow
+	if err := json.Unmarshal(bytes.TrimSpace(data), &row); err != nil {
+		t.Fatal(err)
+	}
+	if row.Killer.DisplayName != "Caird [NPC]" || !row.Killer.IsNPC {
+		t.Fatalf("killmail export did not include semantic NPC killer: %#v", row.Killer)
+	}
+	if row.Victim.DisplayName != "Victim Pilot" || row.System.DisplayName != "ILC-7R7" {
+		t.Fatalf("killmail export did not include semantic victim/system fields: victim=%#v system=%#v", row.Victim, row.System)
+	}
+	if row.SummaryText != "Caird [NPC] killed Victim Pilot" || len(row.SourceIDs) != 1 || len(row.Sources) != 1 {
+		t.Fatalf("killmail export did not preserve raw and semantic source fields: %#v", row)
+	}
+}
+
 func TestWritePublicExportWritesAuditableManifest(t *testing.T) {
 	store := db.NewMemoryStore()
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)

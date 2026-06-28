@@ -18,6 +18,13 @@ $env:DATABASE_URL = $DatabaseUrl
 
 if ($ClientPath) {
   New-Item -ItemType Directory -Force -Path ".\tmp" | Out-Null
+  if (-not $StaticUniversePath) {
+    $StaticUniversePath = ".\tmp\static-client-universe-stillness"
+  }
+  go run ./cmd/br-import static-client-decode-universe -client-path $ClientPath -out $StaticUniversePath
+  if ($LASTEXITCODE -ne 0) {
+    throw "static-client universe decode failed"
+  }
   go run ./cmd/br-import static-client-extract-production -client-path $ClientPath -out ".\tmp\static-client-production-resources.json"
   if ($LASTEXITCODE -ne 0) {
     throw "static-client production extraction failed"

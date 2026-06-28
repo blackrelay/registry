@@ -64,6 +64,10 @@ export BR_REGISTRY_CONTAINER_RUNTIME="$runtime"
 
 if [ -n "$client_path" ]; then
   mkdir -p tmp
+  if [ -z "$static_universe_path" ]; then
+    static_universe_path="./tmp/static-client-universe-stillness"
+  fi
+  go run ./cmd/br-import static-client-decode-universe -client-path "$client_path" -out "$static_universe_path"
   go run ./cmd/br-import static-client-extract-production -client-path "$client_path" -out ./tmp/static-client-production-resources.json
   go run ./cmd/br-import static-client-extract-types -client-path "$client_path" -out ./tmp/static-client-types.probes.json
 fi

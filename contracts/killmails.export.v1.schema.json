@@ -6,6 +6,7 @@
   "required": ["id", "environment", "occurredAt", "sourceIds"],
   "properties": {
     "id": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string" },
     "environment": { "$ref": "import-envelope.v1.schema.json#/$defs/environment" },
     "occurredAt": { "type": "string", "format": "date-time" },
     "systemId": { "type": "string" },
@@ -19,6 +20,30 @@
     "reporterName": { "type": "string" },
     "lossType": { "type": "string" },
     "sourceIds": { "type": "array", "items": { "type": "string" } },
+    "system": { "$ref": "#/$defs/resolvedValue" },
+    "victim": { "$ref": "#/$defs/resolvedValue" },
+    "killer": { "$ref": "#/$defs/resolvedValue" },
+    "reporter": { "$ref": "#/$defs/resolvedValue" },
+    "summaryText": { "type": "string" },
+    "sources": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
     "raw": { "type": "object" }
+  },
+  "$defs": {
+    "resolvedValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entityId": { "type": "string" },
+        "entityType": { "type": "string" },
+        "rawId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "typeId": { "type": "string" },
+        "isNpc": { "type": "boolean" },
+        "confidence": { "type": "string" },
+        "sourceIds": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
   }
 }
