@@ -728,6 +728,13 @@ func currentPublicTribeSQL() string {
 			nullif(` + displayName + `, '') IS NOT NULL
 			AND lower(` + displayName + `) <> lower('Tribe ' || regexp_replace(e.id, '^.*:', ''))
 			AND lower(` + displayName + `) NOT LIKE 'npc corp %'
+			AND (
+				regexp_replace(e.id, '^.*:', '') = '1000167'
+				OR (
+					regexp_replace(e.id, '^.*:', '') ~ '^[0-9]+$'
+					AND regexp_replace(e.id, '^.*:', '')::bigint >= 98000535
+				)
+			)
 			AND NOT (
 				e.name = 'Tribe ' || regexp_replace(e.id, '^.*:', '')
 				AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)
