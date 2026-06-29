@@ -1518,11 +1518,26 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 	}
 
 	handler := Server{Store: store}.Handler()
+	defaultCharactersReq := httptest.NewRequest(http.MethodGet, "/v1/current/characters?environment=stillness", nil)
+	defaultCharactersRes := httptest.NewRecorder()
+	handler.ServeHTTP(defaultCharactersRes, defaultCharactersReq)
+	if defaultCharactersRes.Code != http.StatusOK {
+		t.Fatalf("default characters endpoint returned %d body %s", defaultCharactersRes.Code, defaultCharactersRes.Body.String())
+	}
+	var defaultCharactersBody struct {
+		Data []model.CurrentEntity `json:"data"`
+	}
+	if err := json.Unmarshal(defaultCharactersRes.Body.Bytes(), &defaultCharactersBody); err != nil {
+		t.Fatal(err)
+	}
+	if len(defaultCharactersBody.Data) != 2 {
+		t.Fatalf("default characters endpoint should expose both event-backed character rows, got %#v", defaultCharactersBody.Data)
+	}
+
 	for _, tc := range []struct {
 		route string
 		want  string
 	}{
-		{route: "/v1/current/characters?environment=stillness", want: "character:stillness:2112091476"},
 		{route: "/v1/current/characters?environment=stillness&profile=known", want: "character:stillness:2112091476"},
 		{route: "/v1/current/characters?environment=stillness&profile=placeholder", want: "character:stillness:42"},
 		{route: "/v1/current/characters?environment=stillness&has_tribe=true", want: "character:stillness:2112091476"},
