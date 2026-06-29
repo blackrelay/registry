@@ -76,6 +76,8 @@ Current Sui killmail objects expose `killer_id`, `victim_id`, `reported_by_chara
 
 `br-indexer -mode derive-events` replays stored Sui event rows into conservative entities, relations and raw killmail records. Use `-module killmail,character,gate,assembly,storage_unit,turret,rift` for the normal semantic repair path. Module-scoped derivation saves a separate cursor for each module and batches page writes into PostgreSQL so append runs avoid replaying high-volume streams such as `network_node`.
 
+`br-indexer -mode repair-character-objects` fetches character objects directly by object ID when those IDs are already referenced by Cycle 6 character events. This is the normal character metadata repair path when broad Sui object-by-type scans are outside the provider's consistent range.
+
 `br-indexer -mode audit-tribe-identity-evidence` scans stored Sui event and object payloads for explicit tribe profile fields. It separates membership-only `tribe_id` or `corpId` evidence from rows that actually contain tribe names, tickers, descriptions or URLs. Candidate profile rows still require review before promotion through `br-import tribe-identities`.
 
 Character event derivation records public metadata `name`, `description` and `url` facts when the event payload exposes them. The metadata name is used as the character display name for that derivation row. Placeholder identities such as `Character <id>`, `Tribe <id>` and `System <id>` are temporary labels that yield to imported or reviewed public display names for the same entity.

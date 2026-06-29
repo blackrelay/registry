@@ -223,7 +223,7 @@ func RunObjectBackfill(ctx context.Context, store ObjectStore, fetcher ObjectFet
 			return BackfillSummary{}, err
 		}
 	}
-	source := objectSourceForNetwork(options.Network, options.Endpoint, options.Environment)
+	source := ObjectSourceForNetwork(options.Network, options.Endpoint, options.Environment)
 	if err := store.EnsureSource(ctx, source); err != nil {
 		return BackfillSummary{}, err
 	}
@@ -405,7 +405,7 @@ func ObjectCursorSource(target ObjectTypeTarget) string {
 	return fmt.Sprintf("sui:%s:objects:%s:%s", target.Network, target.Role, target.TypeRepr)
 }
 
-func objectSourceForNetwork(network, endpoint string, environment model.Environment) model.Source {
+func ObjectSourceForNetwork(network, endpoint string, environment model.Environment) model.Source {
 	return model.Source{
 		ID:          fmt.Sprintf("source:sui:%s:graphql:objects", network),
 		Kind:        model.SourceKindSuiObject,

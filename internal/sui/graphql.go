@@ -62,6 +62,10 @@ type ObjectsQuery struct {
 	First int
 }
 
+type ObjectQuery struct {
+	Address string
+}
+
 type EventsPage struct {
 	Nodes       []MoveEventNode
 	HasNextPage bool
@@ -267,6 +271,25 @@ func BuildObjectsRequest(query ObjectsQuery) (GraphQLRequest, error) {
 	}, nil
 }
 
+func BuildObjectRequest(query ObjectQuery) (GraphQLRequest, error) {
+	if !isSuiID(query.Address) {
+		return GraphQLRequest{}, fmt.Errorf("malformed object address %s", query.Address)
+	}
+	return GraphQLRequest{
+		Query: `query Object($address: SuiAddress!) {
+  object(address: $address) {
+    address
+    digest
+    version
+    asMoveObject {
+      contents { type { repr } json }
+    }
+  }
+}`,
+		Variables: map[string]any{"address": query.Address},
+	}, nil
+}
+
 func (c GraphQLClient) FetchEvents(ctx context.Context, query EventsQuery) (EventsPage, error) {
 	request, err := BuildEventsRequest(query)
 	if err != nil {
@@ -286,6 +309,23 @@ func (c GraphQLClient) FetchEvents(ctx context.Context, query EventsQuery) (Even
 		HasNextPage: payload.Events.PageInfo.HasNextPage,
 		EndCursor:   payload.Events.PageInfo.EndCursor,
 	}, nil
+}
+
+func (c GraphQLClient) FetchObject(ctx context.Context, query ObjectQuery) (MoveObjectNode, bool, error) {
+	request, err := BuildObjectRequest(query)
+	if err != nil {
+		return MoveObjectNode{}, false, err
+	}
+	var payload struct {
+		Object *MoveObjectNode `json:"object"`
+	}
+	if err := c.post(ctx, request, &payload); err != nil {
+		return MoveObjectNode{}, false, err
+	}
+	if payload.Object == nil {
+		return MoveObjectNode{}, false, nil
+	}
+	return *payload.Object, true, nil
 }
 
 func (c GraphQLClient) FetchObjects(ctx context.Context, query ObjectsQuery) (ObjectsPage, error) {

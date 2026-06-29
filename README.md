@@ -193,6 +193,7 @@ go run ./cmd/br-indexer -mode all -manifest testdata/fixtures/sui-packages.still
 Derive semantic records from stored chain rows:
 ```sh
 go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
+go run ./cmd/br-indexer -mode repair-character-objects -derive-batch-size 5000 -concurrency 16
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 ```
@@ -219,7 +220,7 @@ go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fix
 go run ./cmd/br-indexer -mode status -export-manifest ./exports/manifest.json
 ```
 
-Provider-limited Sui object scans can return `Request is outside consistent range`. Registry records that as `range_blocked` coverage rather than treating it as a retryable hard failure. Use event backfill and `derive-events` as the primary chain-derived state path then use World API and static-client imports for public names and static data.
+Provider-limited Sui object scans can return `Request is outside consistent range`. Registry records that as `range_blocked` coverage rather than treating it as a retryable hard failure. Use event backfill and `derive-events` as the primary chain-derived state path. Use `repair-character-objects` to fetch character objects directly by the object IDs referenced by Cycle 6 events. Then use World API and static-client imports for public names and static data.
 
 Generate and verify public exports:
 ```sh

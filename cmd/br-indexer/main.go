@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/blackrelay/registry/internal/config"
@@ -43,10 +44,30 @@ type rangeBlockedObjectAudit struct {
 	Targets       []sui.ObjectTypeTarget `json:"targets"`
 }
 
+type characterObjectRepairSummary struct {
+	Environment      model.Environment `json:"environment"`
+	Network          string            `json:"network"`
+	Endpoint         string            `json:"endpoint"`
+	Candidates       int               `json:"candidates"`
+	ObjectsFetched   int64             `json:"objectsFetched"`
+	ObjectsMissing   int64             `json:"objectsMissing"`
+	EntitiesDerived  int64             `json:"entitiesDerived"`
+	RelationsDerived int64             `json:"relationsDerived"`
+	KillmailsDerived int64             `json:"killmailsDerived"`
+	Errors           int64             `json:"errors"`
+	StartedAt        time.Time         `json:"startedAt"`
+	FinishedAt       time.Time         `json:"finishedAt"`
+}
+
+type characterObjectRef struct {
+	EntityID string
+	ObjectID string
+}
+
 func main() {
 	cfg := config.Load()
 	manifestPath := flag.String("manifest", "testdata/fixtures/sui-packages.stillness.json", "Sui package manifest path")
-	mode := flag.String("mode", "plan", "indexer mode: plan, audit, audit-stillness, report, status, audit-killmails, audit-current-state, audit-character-profiles, audit-tribe-identity-evidence, audit-evidence-bridges, audit-object-shapes, audit-systems, audit-range-blocked-objects, events, objects, retry-range-blocked-objects, all, derive-events, derive-objects or resolve-evidence")
+	mode := flag.String("mode", "plan", "indexer mode: plan, audit, audit-stillness, report, status, audit-killmails, audit-current-state, audit-character-profiles, audit-tribe-identity-evidence, audit-evidence-bridges, audit-object-shapes, audit-systems, audit-range-blocked-objects, events, objects, retry-range-blocked-objects, repair-character-objects, all, derive-events, derive-objects or resolve-evidence")
 	environment := flag.String("environment", string(model.EnvironmentStillness), "registry environment")
 	network := flag.String("network", "sui-testnet", "Sui network from the package manifest")
 	endpoint := flag.String("endpoint", "https://graphql.testnet.sui.io/graphql", "Sui GraphQL endpoint")
@@ -132,6 +153,23 @@ func main() {
 			network:     *network,
 			databaseURL: *databaseURL,
 			migrate:     *migrate,
+		})
+		return
+	}
+	if *mode == "repair-character-objects" {
+		runRepairCharacterObjects(indexOptions{
+			environment:     model.Environment(*environment),
+			network:         *network,
+			endpoint:        *endpoint,
+			databaseURL:     *databaseURL,
+			cycles:          cycleScope.Cycles,
+			includeUncycled: cycleScope.IncludeUncycled,
+			concurrency:     *concurrency,
+			retries:         *retries,
+			retryBase:       *retryBase,
+			retryJitter:     *retryJitter,
+			deriveBatchSize: *deriveBatchSize,
+			migrate:         *migrate,
 		})
 		return
 	}
@@ -399,6 +437,213 @@ func main() {
 	default:
 		slog.Error("unknown indexer mode", "mode", *mode)
 		os.Exit(1)
+	}
+}
+
+func runRepairCharacterObjects(options indexOptions) {
+	ctx := context.Background()
+	pool, err := db.Connect(ctx, options.databaseURL)
+	if err != nil {
+		slog.Error("connect PostgreSQL", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+	if options.migrate {
+		if err := db.ApplyMigrations(ctx, pool); err != nil {
+			slog.Error("apply migrations", "error", err)
+			os.Exit(1)
+		}
+	}
+	if options.environment == "" {
+		options.environment = model.EnvironmentStillness
+	}
+	if options.network == "" {
+		options.network = "sui-testnet"
+	}
+	if options.endpoint == "" {
+		options.endpoint = "https://graphql.testnet.sui.io/graphql"
+	}
+	if options.deriveBatchSize <= 0 {
+		options.deriveBatchSize = 1000
+	}
+	if options.concurrency <= 0 {
+		options.concurrency = 8
+	}
+	store := db.PostgresStore{Pool: pool}
+	source := sui.ObjectSourceForNetwork(options.network, options.endpoint, options.environment)
+	if err := store.EnsureSource(ctx, source); err != nil {
+		slog.Error("ensure Sui object source", "error", err)
+		os.Exit(1)
+	}
+	refs, err := listMissingCharacterObjectRefs(ctx, store, options)
+	if err != nil {
+		slog.Error("list missing character object refs", "error", err)
+		os.Exit(1)
+	}
+	startedAt := time.Now().UTC()
+	summary := characterObjectRepairSummary{
+		Environment: options.environment,
+		Network:     options.network,
+		Endpoint:    options.endpoint,
+		Candidates:  len(refs),
+		StartedAt:   startedAt,
+	}
+	if len(refs) == 0 {
+		summary.FinishedAt = time.Now().UTC()
+		writeJSON(summary)
+		return
+	}
+	client := sui.GraphQLClient{
+		Endpoint: options.endpoint,
+		Retry: sui.RetryConfig{
+			Retries:   options.retries,
+			BaseDelay: options.retryBase,
+			Jitter:    options.retryJitter,
+			OnRetry: func(reason string, attempt int, delay time.Duration) {
+				fmt.Fprintf(os.Stderr, "Retrying Sui GraphQL %s attempt %d/%d after %s\n", reason, attempt, options.retries, delay)
+			},
+		},
+	}
+	workerCount := options.concurrency
+	if workerCount > len(refs) {
+		workerCount = len(refs)
+	}
+	jobs := make(chan characterObjectRef)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+	addError := func(err error) {
+		mu.Lock()
+		defer mu.Unlock()
+		summary.Errors++
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	addCounts := func(fetched, missing, entities, relations, killmails int64) {
+		mu.Lock()
+		defer mu.Unlock()
+		summary.ObjectsFetched += fetched
+		summary.ObjectsMissing += missing
+		summary.EntitiesDerived += entities
+		summary.RelationsDerived += relations
+		summary.KillmailsDerived += killmails
+	}
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for ref := range jobs {
+				node, ok, err := client.FetchObject(ctx, sui.ObjectQuery{Address: ref.ObjectID})
+				if err != nil {
+					addError(fmt.Errorf("fetch object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					continue
+				}
+				if !ok {
+					addCounts(0, 1, 0, 0, 0)
+					continue
+				}
+				record, err := sui.NormalizeMoveObject(node, sui.NormalizeOptions{
+					Environment: options.environment,
+					SourceID:    source.ID,
+					FetchedAt:   time.Now().UTC(),
+				})
+				if err != nil {
+					addError(fmt.Errorf("normalise object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					continue
+				}
+				if err := store.UpsertSuiObject(ctx, record); err != nil {
+					addError(fmt.Errorf("upsert object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					continue
+				}
+				graph := sui.DeriveGraphFromObject(record)
+				var entities []db.EntityFactSet
+				for _, item := range graph.Entities {
+					entities = append(entities, db.EntityFactSet{Entity: item.Entity, Facts: item.Facts})
+				}
+				if err := store.UpsertEventDerivationBatch(ctx, entities, graph.Relations, graph.Killmails); err != nil {
+					addError(fmt.Errorf("derive object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					continue
+				}
+				addCounts(1, 0, int64(len(graph.Entities)), int64(len(graph.Relations)), int64(len(graph.Killmails)))
+			}
+		}()
+	}
+	for _, ref := range refs {
+		jobs <- ref
+	}
+	close(jobs)
+	wg.Wait()
+	summary.FinishedAt = time.Now().UTC()
+	writeJSON(summary)
+	if firstErr != nil {
+		slog.Error("repair character objects", "error", firstErr)
+		os.Exit(1)
+	}
+}
+
+func listMissingCharacterObjectRefs(ctx context.Context, store db.PostgresStore, options indexOptions) ([]characterObjectRef, error) {
+	if store.Pool == nil {
+		return nil, fmt.Errorf("postgres pool is nil")
+	}
+	cyclePredicate := cycleSQLPredicate("e.cycle", options.cycles, options.includeUncycled)
+	query := `
+WITH event_characters AS (
+  SELECT
+    e.id AS entity_id,
+    max(CASE WHEN f.key = 'character_id' THEN f.value_json #>> '{}' END) AS object_id
+  FROM entities e
+  JOIN entity_facts f ON f.entity_id = e.id
+  WHERE e.environment = $1
+    AND e.entity_type = 'character'
+` + cyclePredicate + `
+  GROUP BY e.id
+  HAVING bool_or(f.key IN ('source_event_kind', 'source_event_id', 'transaction_digest'))
+     AND max(CASE WHEN f.key = 'character_id' THEN f.value_json #>> '{}' END) ~ '^0x[0-9a-fA-F]{64}$'
+)
+SELECT entity_id, object_id
+FROM event_characters ec
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM sui_objects o
+  WHERE o.environment = $1
+    AND lower(o.object_id) = lower(ec.object_id)
+)
+ORDER BY entity_id
+LIMIT $2`
+	rows, err := store.Pool.Query(ctx, query, options.environment, options.deriveBatchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var refs []characterObjectRef
+	for rows.Next() {
+		var ref characterObjectRef
+		if err := rows.Scan(&ref.EntityID, &ref.ObjectID); err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return refs, nil
+}
+
+func cycleSQLPredicate(column string, cycles []int, includeUncycled bool) string {
+	var values []string
+	for _, cycle := range cycles {
+		values = append(values, fmt.Sprint(cycle))
+	}
+	switch {
+	case len(values) > 0 && includeUncycled:
+		return "    AND (" + column + " IN (" + strings.Join(values, ",") + ") OR " + column + " IS NULL)\n"
+	case len(values) > 0:
+		return "    AND " + column + " IN (" + strings.Join(values, ",") + ")\n"
+	case !includeUncycled:
+		return "    AND " + column + " IS NOT NULL\n"
+	default:
+		return ""
 	}
 }
 
