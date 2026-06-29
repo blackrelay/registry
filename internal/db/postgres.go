@@ -538,6 +538,7 @@ func (s PostgresStore) ListEntities(ctx context.Context, query EntityQuery) (Ent
 	}
 	where = addCycleColumnFilter(&args, where, "e.cycle", query.Cycles, query.IncludeUncycled)
 	if query.PublicOnly {
+		where += " AND " + publicListedCharacterSQL()
 		where += " AND " + publicListedTribeSQL()
 	}
 	if query.Q != "" {
@@ -764,6 +765,19 @@ func publicListedTribeSQL() string {
 				e.name = 'Tribe ' || ` + tribeID + `
 				AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)
 			)
+		)
+	)`
+}
+
+func publicListedCharacterSQL() string {
+	return `(
+		e.entity_type <> 'character'
+		OR EXISTS (
+			SELECT 1
+			FROM entity_facts f
+			WHERE f.entity_id = e.id
+			  AND f.key IN ('source_event_kind', 'source_event_id', 'transaction_digest')
+			  AND nullif(btrim(f.value_json #>> '{}'), '') IS NOT NULL
 		)
 	)`
 }
