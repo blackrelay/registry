@@ -203,7 +203,7 @@ func TestCurrentEntityMatchesBareAndCanonicalTribeIDs(t *testing.T) {
 	}
 }
 
-func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
+func TestDedupeCurrentCharacterIdentitiesPreservesDistinctCharacterIDs(t *testing.T) {
 	now := time.Date(2026, 6, 27, 13, 12, 29, 0, time.UTC)
 	const characterAddress = "0xdff1ca19cea48a7d452cd0d79ebed10398bb90178aa7d2a4726e99e3344b5c78"
 	items := []model.CurrentEntity{
@@ -260,23 +260,11 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 
 	deduped := dedupeCurrentEntities(items, CurrentEntityQuery{Type: model.EntityTypeCharacter})
 
-	if len(deduped) != 1 {
-		t.Fatalf("expected one current character identity, got %#v", deduped)
+	if len(deduped) != 2 {
+		t.Fatalf("character ids with the same address and name must stay distinct, got %#v", deduped)
 	}
-	if deduped[0].Entity.ID != "character:stillness:2112092610" {
-		t.Fatalf("expected event-backed Cycle 6 row to win, got %s", deduped[0].Entity.ID)
-	}
-	if deduped[0].Facts["object_id"] != "0x782282305a916627bb9a96e89d24224c6bb2d4db14a85f2208311a91e65c3bf7" {
-		t.Fatalf("legacy object evidence was not retained: %#v", deduped[0].Facts)
-	}
-	if !containsString(deduped[0].SourceIDs, "source:sui-object:legacy") || !containsString(deduped[0].SourceIDs, "source:sui-event:cycle-6") {
-		t.Fatalf("source evidence was not merged: %#v", deduped[0].SourceIDs)
-	}
-	if len(deduped[0].OutgoingRelations) != 1 {
-		t.Fatalf("expected only winning row relations to remain, got %#v", deduped[0].OutgoingRelations)
-	}
-	if deduped[0].OutgoingRelations[0].SubjectEntityID != deduped[0].Entity.ID {
-		t.Fatalf("stale duplicate subject relation leaked into current row: %#v", deduped[0].OutgoingRelations[0])
+	if deduped[0].Entity.ID != "character:stillness:2112092421" || deduped[1].Entity.ID != "character:stillness:2112092610" {
+		t.Fatalf("dedupe changed character identity rows: %#v", deduped)
 	}
 }
 
