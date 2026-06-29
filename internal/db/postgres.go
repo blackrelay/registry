@@ -733,6 +733,14 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 		where += fmt.Sprintf(" AND e.environment = $%d", len(args))
 	}
 	where = addCycleColumnFilter(&args, where, "e.cycle", query.Cycles, query.IncludeUncycled)
+	if currentScopedCharacterEvidenceRequired(query) {
+		where += ` AND (
+			e.entity_type <> 'character'
+			OR e.facts_json ? 'source_event_kind'
+			OR e.facts_json ? 'source_event_id'
+			OR e.facts_json ? 'transaction_digest'
+		)`
+	}
 	if strings.TrimSpace(query.Q) != "" {
 		args = append(args, "%"+strings.ToLower(strings.TrimSpace(query.Q))+"%")
 		where += fmt.Sprintf(" AND lower(e.id || ' ' || e.slug || ' ' || e.name || ' ' || coalesce(e.display_name, '') || ' ' || coalesce(e.summary, '')) LIKE $%d", len(args))
