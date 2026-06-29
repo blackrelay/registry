@@ -356,6 +356,16 @@ func TestCurrentCycleTribeQueryRejectsPlaceholderAndNPCCorpRows(t *testing.T) {
 	if currentEntityMatchesQuery(npcCorp, query) {
 		t.Fatalf("Cycle-scoped tribe query matched NPC corp tribe row")
 	}
+
+	preCycleTribe := publicTribe
+	preCycleTribe.Entity.ID = "tribe:stillness:98000533"
+	preCycleTribe.Entity.Name = "Stark Industries"
+	preCycleTribe.Entity.DisplayName = "Stark Industries"
+	preCycleTribe.Facts = map[string]any{"tribe_id": "98000533", "tag": "STARK"}
+	deriveCurrentEntity(&preCycleTribe)
+	if currentEntityMatchesQuery(preCycleTribe, query) {
+		t.Fatalf("Cycle-scoped tribe query matched pre-cycle World API tribe row")
+	}
 }
 
 func TestDedupeCurrentTribeIdentitiesPrefersNamedProfileRow(t *testing.T) {

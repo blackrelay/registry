@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/blackrelay/registry/internal/model"
@@ -267,11 +268,23 @@ func hasPublicCurrentTribeProfile(item model.CurrentEntity) bool {
 	if shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
 		return false
 	}
-	return !isNPCTribeName(name)
+	return !isNPCTribeName(name) && isCycle6PublicTribeID(tribeID)
 }
 
 func isNPCTribeName(name string) bool {
 	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), "npc corp ")
+}
+
+func isCycle6PublicTribeID(tribeID string) bool {
+	tribeID = strings.TrimSpace(tribeID)
+	if tribeID == "1000167" {
+		return true
+	}
+	value, err := strconv.ParseInt(tribeID, 10, 64)
+	if err != nil {
+		return false
+	}
+	return value >= 98000535
 }
 
 func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery) []model.CurrentEntity {

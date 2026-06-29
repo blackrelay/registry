@@ -466,10 +466,10 @@ func TestReadEndpointsDefaultToCurrentCycleAndRejectUnsupportedCycles(t *testing
 	source := model.Source{ID: "source:fixture:cycles", Kind: model.SourceKindSuiEvent, Title: "fixture", Locator: "fixture", Environment: model.EnvironmentStillness, CreatedAt: now}
 	store.Sources[source.ID] = source
 	for _, entity := range []model.Entity{
-		{ID: "tribe:stillness:cycle5", Slug: "tribe-cycle5-stillness", Type: model.EntityTypeTribe, Name: "Cycle 5 Tribe", DisplayName: "Cycle 5 Tribe", Environment: model.EnvironmentStillness, Cycle: &cycle5, UpdatedAt: now.Add(-time.Hour)},
-		{ID: "tribe:stillness:cycle6", Slug: "tribe-cycle6-stillness", Type: model.EntityTypeTribe, Name: "Cycle 6 Tribe", DisplayName: "Cycle 6 Tribe", Environment: model.EnvironmentStillness, Cycle: &cycle6, UpdatedAt: now},
-		{ID: "tribe:stillness:unlabelled", Slug: "tribe-unlabelled-stillness", Type: model.EntityTypeTribe, Name: "Unlabelled Tribe", DisplayName: "Unlabelled Tribe", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(-time.Minute)},
-		{ID: "tribe:utopia:cycle6", Slug: "tribe-cycle6-utopia", Type: model.EntityTypeTribe, Name: "Utopia Tribe", DisplayName: "Utopia Tribe", Environment: model.EnvironmentUtopia, Cycle: &cycle6, UpdatedAt: now.Add(time.Minute)},
+		{ID: "tribe:stillness:98000422", Slug: "tribe-98000422-stillness", Type: model.EntityTypeTribe, Name: "Cycle 5 Tribe", DisplayName: "Cycle 5 Tribe", Environment: model.EnvironmentStillness, Cycle: &cycle5, UpdatedAt: now.Add(-time.Hour)},
+		{ID: "tribe:stillness:98000535", Slug: "tribe-98000535-stillness", Type: model.EntityTypeTribe, Name: "Cycle 6 Tribe", DisplayName: "Cycle 6 Tribe", Environment: model.EnvironmentStillness, Cycle: &cycle6, UpdatedAt: now},
+		{ID: "tribe:stillness:98000536", Slug: "tribe-98000536-stillness", Type: model.EntityTypeTribe, Name: "Unlabelled Tribe", DisplayName: "Unlabelled Tribe", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(-time.Minute)},
+		{ID: "tribe:utopia:98000537", Slug: "tribe-98000537-utopia", Type: model.EntityTypeTribe, Name: "Utopia Tribe", DisplayName: "Utopia Tribe", Environment: model.EnvironmentUtopia, Cycle: &cycle6, UpdatedAt: now.Add(time.Minute)},
 	} {
 		if err := store.UpsertEntityFacts(ctx, entity, []db.EntityFactDraft{{
 			Key:          "metadata_name",
@@ -578,10 +578,10 @@ func TestReadEndpointsDefaultToCurrentCycleAndRejectUnsupportedCycles(t *testing
 		}
 	}
 
-	assertEntityIDs("/v1/current/tribes", "tribe:stillness:cycle6")
-	assertEntityIDs("/v1/current/tribes?environment=stillness", "tribe:stillness:cycle6")
-	assertEntityIDs("/v1/current/tribes?cycles=current", "tribe:stillness:cycle6")
-	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=6", "tribe:stillness:cycle6")
+	assertEntityIDs("/v1/current/tribes", "tribe:stillness:98000535")
+	assertEntityIDs("/v1/current/tribes?environment=stillness", "tribe:stillness:98000535")
+	assertEntityIDs("/v1/current/tribes?cycles=current", "tribe:stillness:98000535")
+	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=6", "tribe:stillness:98000535")
 	assertEventIDs("/v1/events", "event:cycle6")
 	assertEventIDs("/v1/events?environment=stillness", "event:cycle6")
 	assertEventIDs("/v1/events?cycles=current", "event:cycle6")
@@ -1278,7 +1278,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 	store.Sources[source.ID] = source
 	entities := []model.Entity{
 		{ID: "character:stillness:2112091476", Slug: "character-2112091476-stillness", Type: model.EntityTypeCharacter, Name: "Tao", DisplayName: "Tao", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(8 * time.Minute)},
-		{ID: "tribe:stillness:42", Slug: "tribe-42-stillness", Type: model.EntityTypeTribe, Name: "Black Relay", DisplayName: "Black Relay", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(7 * time.Minute)},
+		{ID: "tribe:stillness:98000535", Slug: "tribe-98000535-stillness", Type: model.EntityTypeTribe, Name: "Black Relay", DisplayName: "Black Relay", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(7 * time.Minute)},
 		{ID: "assembly:stillness:100", Slug: "assembly-100-stillness", Type: model.EntityTypeAssembly, Name: "Assembly 100", DisplayName: "Assembly 100", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(6 * time.Minute)},
 		{ID: "gate:stillness:200", Slug: "gate-200-stillness", Type: model.EntityTypeGate, Name: "Gate 200", DisplayName: "Gate 200", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(5 * time.Minute)},
 		{ID: "storage:stillness:300", Slug: "storage-300-stillness", Type: model.EntityTypeStorage, Name: "Storage 300", DisplayName: "Storage 300", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(4 * time.Minute)},
@@ -1336,7 +1336,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.UpsertEntityFacts(context.Background(), store.Entities["tribe:stillness:42"], []db.EntityFactDraft{
+	if err := store.UpsertEntityFacts(context.Background(), store.Entities["tribe:stillness:98000535"], []db.EntityFactDraft{
 		{Key: "tag", Value: "BR", SourceID: source.ID, Confidence: model.ConfidenceReported, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
 		{Key: "aliases", Value: []string{"Relay"}, SourceID: source.ID, Confidence: model.ConfidenceReported, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
 		{Key: "description", Value: "Reviewed public tribe profile", SourceID: source.ID, Confidence: model.ConfidenceReported, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
@@ -1352,7 +1352,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 		id         string
 	}{
 		{route: "/v1/current/characters?environment=stillness", entityType: model.EntityTypeCharacter, id: "character:stillness:2112091476"},
-		{route: "/v1/current/tribes?environment=stillness", entityType: model.EntityTypeTribe, id: "tribe:stillness:42"},
+		{route: "/v1/current/tribes?environment=stillness", entityType: model.EntityTypeTribe, id: "tribe:stillness:98000535"},
 		{route: "/v1/current/assemblies?environment=stillness", entityType: model.EntityTypeAssembly, id: "assembly:stillness:100"},
 		{route: "/v1/current/gates?environment=stillness", entityType: model.EntityTypeGate, id: "gate:stillness:200"},
 		{route: "/v1/current/storage?environment=stillness", entityType: model.EntityTypeStorage, id: "storage:stillness:300"},
@@ -1386,7 +1386,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 		if len(body.Data[0].SourceIDs) == 0 || body.Data[0].SourceIDs[0] != source.ID {
 			t.Fatalf("%s did not include provenance: %#v", tc.route, body.Data[0].SourceIDs)
 		}
-		if tc.id == "tribe:stillness:42" {
+		if tc.id == "tribe:stillness:98000535" {
 			if body.Data[0].Derived == nil || body.Data[0].Derived.Profile == nil {
 				t.Fatalf("%s did not expose reviewed tribe profile: %#v", tc.route, body.Data[0].Derived)
 			}
@@ -1571,8 +1571,8 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 	source := model.Source{ID: "source:tribe-identities:stillness", Kind: model.SourceKindCommunityReport, Title: "Reviewed tribes", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
 	reviewed := model.Entity{
-		ID:          "tribe:stillness:42",
-		Slug:        "tribe-42-stillness",
+		ID:          "tribe:stillness:98000535",
+		Slug:        "tribe-98000535-stillness",
 		Type:        model.EntityTypeTribe,
 		Name:        "Black Relay",
 		DisplayName: "Black Relay",
@@ -1599,6 +1599,16 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 		Environment: model.EnvironmentStillness,
 		Cycle:       &cycle6,
 		UpdatedAt:   now.Add(time.Minute),
+	}
+	preCycleTribe := model.Entity{
+		ID:          "tribe:stillness:98000533",
+		Slug:        "tribe-98000533-stillness",
+		Type:        model.EntityTypeTribe,
+		Name:        "Stark Industries",
+		DisplayName: "Stark Industries",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		UpdatedAt:   now.Add(2 * time.Minute),
 	}
 	if err := store.UpsertEntityFacts(ctx, reviewed, []db.EntityFactDraft{{
 		Key:          "display_name",
@@ -1640,6 +1650,26 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	if err := store.UpsertEntityFacts(ctx, preCycleTribe, []db.EntityFactDraft{
+		{
+			Key:          "tribe_id",
+			Value:        "98000533",
+			SourceID:     "source:world-api:stillness:tribes",
+			Confidence:   model.ConfidenceVerified,
+			Environment:  model.EnvironmentStillness,
+			ReviewStatus: model.ReviewStatusPublished,
+		},
+		{
+			Key:          "tag",
+			Value:        "STARK",
+			SourceID:     "source:world-api:stillness:tribes",
+			Confidence:   model.ConfidenceVerified,
+			Environment:  model.EnvironmentStillness,
+			ReviewStatus: model.ReviewStatusPublished,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	handler := Server{Store: store}.Handler()
 	req := httptest.NewRequest(http.MethodGet, "/v1/current/tribes?environment=stillness", nil)
@@ -1658,6 +1688,6 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 		t.Fatalf("expected one public tribe row, got %#v", body.Data)
 	}
 	if body.Data[0].Entity.ID != reviewed.ID {
-		t.Fatalf("current tribes should exclude placeholders and NPC corp rows: %#v", body.Data)
+		t.Fatalf("current tribes should exclude placeholders, NPC corp rows and pre-cycle World API tribes: %#v", body.Data)
 	}
 }
