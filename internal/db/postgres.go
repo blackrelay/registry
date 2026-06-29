@@ -720,6 +720,22 @@ func currentPlaceholderSQL() string {
 	)`
 }
 
+func currentPublicTribeSQL() string {
+	displayName := `coalesce(nullif(btrim(coalesce(e.display_name, '')), ''), nullif(btrim(e.name), ''), '')`
+	return `(
+		e.entity_type <> 'tribe'
+		OR (
+			nullif(` + displayName + `, '') IS NOT NULL
+			AND lower(` + displayName + `) <> lower('Tribe ' || regexp_replace(e.id, '^.*:', ''))
+			AND lower(` + displayName + `) NOT LIKE 'npc corp %'
+			AND NOT (
+				e.name = 'Tribe ' || regexp_replace(e.id, '^.*:', '')
+				AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)
+			)
+		)
+	)`
+}
+
 func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEntityQuery) (CurrentEntityPage, error) {
 	limit := saneLimit(query.Limit, 50, 200)
 	var args []any
@@ -740,6 +756,9 @@ func (s PostgresStore) ListCurrentEntities(ctx context.Context, query CurrentEnt
 			OR e.facts_json ? 'source_event_id'
 			OR e.facts_json ? 'transaction_digest'
 		)`
+	}
+	if currentScopedTribeProfileRequired(query) {
+		where += " AND " + currentPublicTribeSQL()
 	}
 	if strings.TrimSpace(query.Q) != "" {
 		args = append(args, "%"+strings.ToLower(strings.TrimSpace(query.Q))+"%")
