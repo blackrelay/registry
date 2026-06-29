@@ -367,12 +367,14 @@ func (e *fakeUnauthorizedError) Error() string {
 
 func TestEventsEndpointFiltersBySuiModule(t *testing.T) {
 	store := db.NewMemoryStore()
-	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
+	cycle6 := 6
+	now := time.Date(2026, 6, 26, 10, 0, 0, 0, time.UTC)
 	if err := store.UpsertSuiEvent(context.Background(), db.EventRecord{
 		ID:          "event:character",
 		Kind:        "character.created",
 		Environment: model.EnvironmentStillness,
 		OccurredAt:  now,
+		Cycle:       &cycle6,
 		PackageID:   "0xabc",
 		Module:      "character",
 		Payload:     map[string]any{"module": "character"},
@@ -384,6 +386,7 @@ func TestEventsEndpointFiltersBySuiModule(t *testing.T) {
 		Kind:        "gate.created",
 		Environment: model.EnvironmentStillness,
 		OccurredAt:  now.Add(-time.Minute),
+		Cycle:       &cycle6,
 		PackageID:   "0xabc",
 		Module:      "gate",
 		Payload:     map[string]any{"module": "gate"},
@@ -575,8 +578,8 @@ func TestReadEndpointsDefaultToCurrentCycleAndRejectUnsupportedCycles(t *testing
 		}
 	}
 
-	assertEntityIDs("/v1/current/tribes", "tribe:stillness:cycle6", "tribe:stillness:unlabelled")
-	assertEntityIDs("/v1/current/tribes?environment=stillness", "tribe:stillness:cycle6", "tribe:stillness:unlabelled")
+	assertEntityIDs("/v1/current/tribes", "tribe:stillness:cycle6")
+	assertEntityIDs("/v1/current/tribes?environment=stillness", "tribe:stillness:cycle6")
 	assertEntityIDs("/v1/current/tribes?cycles=current", "tribe:stillness:cycle6")
 	assertEntityIDs("/v1/current/tribes?environment=stillness&cycles=6", "tribe:stillness:cycle6")
 	assertEventIDs("/v1/events", "event:cycle6")
@@ -656,6 +659,7 @@ func TestOpsSuiCoverageSummarisesCursorHealth(t *testing.T) {
 
 func TestCollectionRoutesFilterByEntityType(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
 	store.Entities["character:stillness:2112091476"] = model.Entity{
 		ID:          "character:stillness:2112091476",
@@ -664,6 +668,7 @@ func TestCollectionRoutesFilterByEntityType(t *testing.T) {
 		Name:        "Character 2112091476",
 		DisplayName: "Character 2112091476",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
 	store.Entities["gate:stillness:100"] = model.Entity{
@@ -673,6 +678,7 @@ func TestCollectionRoutesFilterByEntityType(t *testing.T) {
 		Name:        "Gate 100",
 		DisplayName: "Gate 100",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now.Add(-time.Minute),
 	}
 	handler := Server{Store: store}.Handler()
@@ -772,6 +778,7 @@ func TestEntityProvenanceRoutesReturnFactsRelationsSourcesAndHistory(t *testing.
 
 func TestSearchEndpointUsesEntitySearch(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
 	store.Entities["enemy:stillness:type:92096"] = model.Entity{
 		ID:          "enemy:stillness:type:92096",
@@ -780,6 +787,7 @@ func TestSearchEndpointUsesEntitySearch(t *testing.T) {
 		Name:        "Caird",
 		DisplayName: "Caird [NPC]",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
 	store.Entities["system:stillness:30001001"] = model.Entity{
@@ -789,6 +797,7 @@ func TestSearchEndpointUsesEntitySearch(t *testing.T) {
 		Name:        "NN0-Y-D5",
 		DisplayName: "NN0-Y-D5",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now.Add(-time.Minute),
 	}
 	handler := Server{Store: store}.Handler()
@@ -811,6 +820,7 @@ func TestSearchEndpointUsesEntitySearch(t *testing.T) {
 
 func TestTypeEndpointsFilterByStaticTypeFacts(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 25, 16, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:static-client:types:stillness", Kind: model.SourceKindStaticClientData, Title: "Static types", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
@@ -840,6 +850,7 @@ func TestTypeEndpointsFilterByStaticTypeFacts(t *testing.T) {
 			},
 		},
 	} {
+		item.entity.Cycle = &cycle6
 		if err := store.UpsertEntityFacts(context.Background(), item.entity, item.facts); err != nil {
 			t.Fatal(err)
 		}
@@ -897,6 +908,7 @@ func TestTypeEndpointsFilterByStaticTypeFacts(t *testing.T) {
 
 func TestStaticDomainRoutesExposeEnemiesRecipesAndBlueprints(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 25, 16, 30, 0, 0, time.UTC)
 	source := model.Source{ID: "source:static-client:types:stillness", Kind: model.SourceKindStaticClientData, Title: "Static types", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
@@ -928,6 +940,7 @@ func TestStaticDomainRoutesExposeEnemiesRecipesAndBlueprints(t *testing.T) {
 			},
 		},
 	} {
+		item.entity.Cycle = &cycle6
 		if err := store.UpsertEntityFacts(context.Background(), item.entity, item.facts); err != nil {
 			t.Fatal(err)
 		}
@@ -1074,6 +1087,7 @@ func TestOpsSourceGapsReportsEvidenceThatStillNeedsResolvers(t *testing.T) {
 
 func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:sui:stillness:objects", Kind: model.SourceKindSuiObject, Title: "Sui objects", Locator: "fixture", Environment: model.EnvironmentStillness}
 	otherSource := model.Source{ID: "source:static-client:stillness:types", Kind: model.SourceKindStaticClientData, Title: "Static types", Locator: "fixture", Environment: model.EnvironmentStillness}
@@ -1086,6 +1100,7 @@ func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) 
 		Name:        "Tao",
 		DisplayName: "Tao",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
 	otherCharacter := model.Entity{
@@ -1095,6 +1110,7 @@ func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) 
 		Name:        "Other",
 		DisplayName: "Other",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now.Add(time.Minute),
 	}
 	tribe := model.Entity{
@@ -1104,6 +1120,7 @@ func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) 
 		Name:        "Tribe 42",
 		DisplayName: "Tribe 42",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
 	if err := store.UpsertEntityFacts(context.Background(), character, []db.EntityFactDraft{{
@@ -1205,14 +1222,15 @@ func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) 
 
 func TestCurrentOwnershipEndpointReturnsOwnedByEdges(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:sui:stillness:events", Kind: model.SourceKindSuiEvent, Title: "Sui events", Locator: "fixture", Environment: model.EnvironmentStillness}
 	otherSource := model.Source{ID: "source:static-client:stillness:types", Kind: model.SourceKindStaticClientData, Title: "Static types", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
 	store.Sources[otherSource.ID] = otherSource
-	store.Entities["assembly:stillness:100"] = model.Entity{ID: "assembly:stillness:100", Slug: "assembly-100-stillness", Type: model.EntityTypeAssembly, Name: "Assembly 100", DisplayName: "Assembly 100", Environment: model.EnvironmentStillness, UpdatedAt: now}
-	store.Entities["assembly:stillness:200"] = model.Entity{ID: "assembly:stillness:200", Slug: "assembly-200-stillness", Type: model.EntityTypeAssembly, Name: "Assembly 200", DisplayName: "Assembly 200", Environment: model.EnvironmentStillness, UpdatedAt: now.Add(time.Minute)}
-	store.Entities["character:stillness:2112091476"] = model.Entity{ID: "character:stillness:2112091476", Slug: "character-2112091476-stillness", Type: model.EntityTypeCharacter, Name: "Tao", DisplayName: "Tao", Environment: model.EnvironmentStillness, UpdatedAt: now}
+	store.Entities["assembly:stillness:100"] = model.Entity{ID: "assembly:stillness:100", Slug: "assembly-100-stillness", Type: model.EntityTypeAssembly, Name: "Assembly 100", DisplayName: "Assembly 100", Environment: model.EnvironmentStillness, Cycle: &cycle6, UpdatedAt: now}
+	store.Entities["assembly:stillness:200"] = model.Entity{ID: "assembly:stillness:200", Slug: "assembly-200-stillness", Type: model.EntityTypeAssembly, Name: "Assembly 200", DisplayName: "Assembly 200", Environment: model.EnvironmentStillness, Cycle: &cycle6, UpdatedAt: now.Add(time.Minute)}
+	store.Entities["character:stillness:2112091476"] = model.Entity{ID: "character:stillness:2112091476", Slug: "character-2112091476-stillness", Type: model.EntityTypeCharacter, Name: "Tao", DisplayName: "Tao", Environment: model.EnvironmentStillness, Cycle: &cycle6, UpdatedAt: now}
 	if err := store.UpsertRelations(context.Background(), []db.RelationDraft{{
 		SubjectEntityID: "assembly:stillness:100",
 		Predicate:       "owned_by",
@@ -1254,6 +1272,7 @@ func TestCurrentOwnershipEndpointReturnsOwnedByEdges(t *testing.T) {
 
 func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 24, 10, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:sui:stillness:current", Kind: model.SourceKindSuiObject, Title: "Sui current state", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
@@ -1277,6 +1296,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 		{ID: "route:stillness:nn0-y-d5-to-6rg-y-t4", Slug: "route-nn0-y-d5-to-6rg-y-t4-stillness", Type: model.EntityTypeRoute, Name: "NN0-Y-D5 to 6RG-Y-T4", DisplayName: "NN0-Y-D5 to 6RG-Y-T4", Environment: model.EnvironmentStillness, UpdatedAt: now},
 	}
 	for _, entity := range entities {
+		entity.Cycle = &cycle6
 		facts := []db.EntityFactDraft{{
 			Key:          "metadata_name",
 			Value:        entity.DisplayName,
@@ -1450,6 +1470,7 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 
 func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 	store := db.NewMemoryStore()
+	cycle6 := 6
 	now := time.Date(2026, 6, 26, 16, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:sui:sui-testnet:graphql", Kind: model.SourceKindSuiObject, Title: "Sui objects", Locator: "fixture", Environment: model.EnvironmentStillness, CreatedAt: now}
 	store.Sources[source.ID] = source
@@ -1463,6 +1484,7 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 		{ID: "resource_object:stillness:owner-cap:0xcap", Slug: "owner-cap-0xcap", Type: model.EntityTypeResourceObject, Name: "Owner capability 0xcap", DisplayName: "Owner capability 0xcap", Environment: model.EnvironmentStillness, UpdatedAt: now},
 		{ID: "resource_object:stillness:location-hash:loc-1", Slug: "location-hash-loc-1", Type: model.EntityTypeResourceObject, Name: "Location hash loc-1", DisplayName: "Location hash loc-1", Environment: model.EnvironmentStillness, UpdatedAt: now},
 	} {
+		entity.Cycle = &cycle6
 		if err := store.UpsertEntityFacts(context.Background(), entity, nil); err != nil {
 			t.Fatal(err)
 		}
@@ -1529,6 +1551,7 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testing.T) {
 	store := db.NewMemoryStore()
 	ctx := context.Background()
+	cycle6 := 6
 	now := time.Date(2026, 6, 26, 8, 0, 0, 0, time.UTC)
 	source := model.Source{ID: "source:tribe-identities:stillness", Kind: model.SourceKindCommunityReport, Title: "Reviewed tribes", Locator: "fixture", Environment: model.EnvironmentStillness}
 	store.Sources[source.ID] = source
@@ -1539,6 +1562,7 @@ func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testin
 		Name:        "Black Relay",
 		DisplayName: "Black Relay",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now.Add(-time.Hour),
 	}
 	placeholder := model.Entity{
@@ -1548,6 +1572,7 @@ func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testin
 		Name:        "Tribe 99",
 		DisplayName: "Tribe 99",
 		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
 	if err := store.UpsertEntityFacts(ctx, reviewed, []db.EntityFactDraft{{

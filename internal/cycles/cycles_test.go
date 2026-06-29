@@ -78,10 +78,9 @@ func TestParseScopeDefaultsToCurrentOnly(t *testing.T) {
 		wantAll          bool
 	}{
 		{
-			name:             "missing value defaults to current cycle plus unlabelled rows",
-			defaultCurrent:   true,
-			wantCycles:       []int{6},
-			wantIncludeEmpty: true,
+			name:           "missing value defaults to current cycle only",
+			defaultCurrent: true,
+			wantCycles:     []int{6},
 		},
 		{
 			name:       "current is explicit current cycle only",

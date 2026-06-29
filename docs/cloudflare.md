@@ -18,7 +18,7 @@ The normal Cycle 6 operator wrapper follows that order by default:
 ./scripts/refresh-cycle6.sh --max-pages 5 --concurrency 64
 ```
 
-It runs migrations, Sui append/repair work, derivation, evidence resolution, audits, the aggregate report, compact export generation into a staging directory, export verification, promotion to the configured export path and a summary write. The default export scope is the current cycle plus unlabelled rows and the default publish prefix is `registry/current`. Repair passes can use `-SkipExport`. R2 publication uses `-PublishR2` with `BR_R2_ACCOUNT_ID`, `BR_R2_BUCKET`, `BR_R2_ACCESS_KEY_ID` and `BR_R2_SECRET_ACCESS_KEY` configured for the target bucket.
+It runs migrations, Sui append/repair work, derivation, evidence resolution, audits, the aggregate report, compact export generation into a staging directory, export verification, promotion to the configured export path and a summary write. The default export scope is the current cycle and the default publish prefix is `registry/current`. Repair passes can use `-SkipExport`. R2 publication uses `-PublishR2` with `BR_R2_ACCOUNT_ID`, `BR_R2_BUCKET`, `BR_R2_ACCESS_KEY_ID` and `BR_R2_SECRET_ACCESS_KEY` configured for the target bucket.
 
 The local publisher writes the object-key shape intended for R2:
 ```text

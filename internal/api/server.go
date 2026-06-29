@@ -811,7 +811,7 @@ func (s Server) parseOptionalTime(w http.ResponseWriter, r *http.Request, key st
 func (s Server) cycleScopeFromRequest(w http.ResponseWriter, r *http.Request) (cyclepkg.Scope, bool) {
 	scope, err := cyclepkg.ParseScope(firstNonEmpty(r.URL.Query().Get("cycles"), r.URL.Query().Get("cycle")), true)
 	if err != nil {
-		s.writeError(w, http.StatusBadRequest, "invalid_query", "Cycle query parameter must be all, current, or comma-separated positive integers.", map[string]any{"error": err.Error()})
+		s.writeError(w, http.StatusBadRequest, "invalid_query", "Cycle query parameter must be current or a supported positive integer.", map[string]any{"error": err.Error()})
 		return cyclepkg.Scope{}, false
 	}
 	return scope, true

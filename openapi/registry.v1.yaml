@@ -1363,7 +1363,7 @@ components:
     Cycles:
       name: cycles
       in: query
-      description: Cycle scope for list queries. Omit for the current cycle plus unlabelled compatibility rows, or use `current` or `6` for strict Cycle 6 rows.
+      description: Cycle scope for list queries. Omit for the current cycle, or use `current` or `6` for strict Cycle 6 rows.
       schema:
         type: string
         examples:
