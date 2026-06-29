@@ -181,6 +181,9 @@ func factStringSlice(value any) []string {
 }
 
 func currentEntityMatchesQuery(item model.CurrentEntity, query CurrentEntityQuery) bool {
+	if currentScopedCharacterEvidenceRequired(query) && item.Entity.Type == model.EntityTypeCharacter && !hasEventBackedCharacterEvidence(item) {
+		return false
+	}
 	if query.ProfileState != "" && !matchesProfileState(item, query.ProfileState) {
 		return false
 	}
@@ -233,6 +236,10 @@ func currentEntityMatchesQuery(item model.CurrentEntity, query CurrentEntityQuer
 		return false
 	}
 	return true
+}
+
+func currentScopedCharacterEvidenceRequired(query CurrentEntityQuery) bool {
+	return len(query.Cycles) > 0
 }
 
 func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery) []model.CurrentEntity {

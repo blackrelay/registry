@@ -1114,6 +1114,13 @@ func TestCurrentCharactersEndpointReturnsFactsRelationsAndSources(t *testing.T) 
 		Environment:  model.EnvironmentStillness,
 		ReviewStatus: model.ReviewStatusReviewed,
 	}, {
+		Key:          "source_event_kind",
+		Value:        "character.created",
+		SourceID:     source.ID,
+		Confidence:   model.ConfidenceVerified,
+		Environment:  model.EnvironmentStillness,
+		ReviewStatus: model.ReviewStatusReviewed,
+	}, {
 		Key:          "metadata_name",
 		Value:        "Tao",
 		SourceID:     source.ID,
@@ -1270,14 +1277,25 @@ func TestCurrentDomainEndpointsExposeCoreNormalisedRecords(t *testing.T) {
 		{ID: "route:stillness:nn0-y-d5-to-6rg-y-t4", Slug: "route-nn0-y-d5-to-6rg-y-t4-stillness", Type: model.EntityTypeRoute, Name: "NN0-Y-D5 to 6RG-Y-T4", DisplayName: "NN0-Y-D5 to 6RG-Y-T4", Environment: model.EnvironmentStillness, UpdatedAt: now},
 	}
 	for _, entity := range entities {
-		if err := store.UpsertEntityFacts(context.Background(), entity, []db.EntityFactDraft{{
+		facts := []db.EntityFactDraft{{
 			Key:          "metadata_name",
 			Value:        entity.DisplayName,
 			SourceID:     source.ID,
 			Confidence:   model.ConfidenceVerified,
 			Environment:  model.EnvironmentStillness,
 			ReviewStatus: model.ReviewStatusReviewed,
-		}}); err != nil {
+		}}
+		if entity.Type == model.EntityTypeCharacter {
+			facts = append(facts, db.EntityFactDraft{
+				Key:          "source_event_kind",
+				Value:        "character.created",
+				SourceID:     source.ID,
+				Confidence:   model.ConfidenceVerified,
+				Environment:  model.EnvironmentStillness,
+				ReviewStatus: model.ReviewStatusReviewed,
+			})
+		}
+		if err := store.UpsertEntityFacts(context.Background(), entity, facts); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1451,11 +1469,13 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 	}
 	if err := store.UpsertEntityFacts(context.Background(), store.Entities["character:stillness:2112091476"], []db.EntityFactDraft{
 		{Key: "metadata_name", Value: "FC Jotunn", SourceID: source.ID, Confidence: model.ConfidenceVerified, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
+		{Key: "source_event_kind", Value: "character.created", SourceID: source.ID, Confidence: model.ConfidenceVerified, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.UpsertEntityFacts(context.Background(), store.Entities["character:stillness:42"], []db.EntityFactDraft{
 		{Key: "character_id", Value: "42", SourceID: source.ID, Confidence: model.ConfidenceVerified, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
+		{Key: "source_event_kind", Value: "character.created", SourceID: source.ID, Confidence: model.ConfidenceVerified, Environment: model.EnvironmentStillness, ReviewStatus: model.ReviewStatusReviewed},
 	}); err != nil {
 		t.Fatal(err)
 	}

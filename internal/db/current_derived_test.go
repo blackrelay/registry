@@ -280,6 +280,50 @@ func TestDedupeCurrentCharacterIdentitiesPrefersEventBackedRow(t *testing.T) {
 	}
 }
 
+func TestCurrentCycleCharacterQueryRejectsObjectOnlyRows(t *testing.T) {
+	objectOnly := model.CurrentEntity{
+		Entity: model.Entity{
+			ID:          "character:stillness:2112077591",
+			Type:        model.EntityTypeCharacter,
+			Name:        "Cassius",
+			DisplayName: "Cassius",
+			Environment: model.EnvironmentStillness,
+			Cycle:       intPtr(6),
+		},
+		Facts: map[string]any{
+			"character_address": "0xf09dfb4627f9144213d3c9a0390933b5febbe2f2bc959404d309d0538ea4fec4",
+			"metadata_name":     "Cassius",
+			"package_id":        "0x28b497559d65ab320d9da4613bf2498d5946b2c0ae3597ccfda3072ce127448c",
+		},
+	}
+	deriveCurrentEntity(&objectOnly)
+	if currentEntityMatchesQuery(objectOnly, CurrentEntityQuery{
+		Type:            model.EntityTypeCharacter,
+		Environment:     model.EnvironmentStillness,
+		Cycles:          []int{6},
+		IncludeUncycled: true,
+	}) {
+		t.Fatalf("Cycle-scoped character query matched old object-only character row")
+	}
+
+	eventBacked := objectOnly
+	eventBacked.Facts = map[string]any{
+		"character_address": "0xf09dfb4627f9144213d3c9a0390933b5febbe2f2bc959404d309d0538ea4fec4",
+		"metadata_name":     "Cassius",
+		"source_event_kind": "character.created",
+		"source_event_id":   "event:character-created",
+	}
+	deriveCurrentEntity(&eventBacked)
+	if !currentEntityMatchesQuery(eventBacked, CurrentEntityQuery{
+		Type:            model.EntityTypeCharacter,
+		Environment:     model.EnvironmentStillness,
+		Cycles:          []int{6},
+		IncludeUncycled: true,
+	}) {
+		t.Fatalf("Cycle-scoped character query rejected event-backed character row")
+	}
+}
+
 func TestDedupeCurrentTribeIdentitiesPrefersNamedProfileRow(t *testing.T) {
 	now := time.Date(2026, 6, 28, 10, 30, 45, 0, time.UTC)
 	items := []model.CurrentEntity{
