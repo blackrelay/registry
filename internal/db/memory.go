@@ -230,8 +230,11 @@ func (s *MemoryStore) ListEntities(ctx context.Context, query EntityQuery) (Enti
 		if !cycleInScope(entity.Cycle, query.Cycles, query.IncludeUncycled) {
 			continue
 		}
-		if query.PublicOnly && !hasPublicListedTribeProfile(entity, s.entityFactMapLocked(entity.ID)) {
-			continue
+		if query.PublicOnly {
+			facts := s.entityFactMapLocked(entity.ID)
+			if !hasPublicListedCharacterEvidence(entity, facts) || !hasPublicListedTribeProfile(entity, facts) {
+				continue
+			}
 		}
 		if query.Q != "" && !strings.Contains(strings.ToLower(entity.Name+" "+entity.Slug+" "+entity.DisplayName), strings.ToLower(query.Q)) {
 			continue

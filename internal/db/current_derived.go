@@ -250,6 +250,27 @@ func currentScopedTribeProfileRequired(query CurrentEntityQuery) bool {
 	return len(query.Cycles) > 0
 }
 
+func hasPublicListedCharacterEvidence(entity model.Entity, facts map[string]any) bool {
+	if entity.Type != model.EntityTypeCharacter {
+		return true
+	}
+	return factValuePresent(facts["source_event_kind"]) ||
+		factValuePresent(facts["source_event_id"]) ||
+		factValuePresent(facts["transaction_digest"])
+}
+
+func factValuePresent(value any) bool {
+	switch item := value.(type) {
+	case nil:
+		return false
+	case string:
+		return strings.TrimSpace(item) != ""
+	default:
+		text := strings.TrimSpace(fmt.Sprint(item))
+		return text != "" && text != "<nil>"
+	}
+}
+
 func hasPublicCurrentTribeProfile(item model.CurrentEntity) bool {
 	if item.Entity.Type != model.EntityTypeTribe {
 		return true

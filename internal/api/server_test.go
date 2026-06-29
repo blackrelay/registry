@@ -671,6 +671,16 @@ func TestCollectionRoutesFilterByEntityType(t *testing.T) {
 		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
+	store.Facts["character:stillness:2112091476"] = []model.Fact{{
+		EntityID:     "character:stillness:2112091476",
+		Key:          "source_event_kind",
+		Value:        "character.created",
+		SourceID:     "source:sui:stillness:events",
+		Confidence:   model.ConfidenceVerified,
+		Environment:  model.EnvironmentStillness,
+		Cycle:        &cycle6,
+		ReviewStatus: model.ReviewStatusPublished,
+	}}
 	store.Entities["gate:stillness:100"] = model.Entity{
 		ID:          "gate:stillness:100",
 		Slug:        "gate-100-stillness",
@@ -1714,4 +1724,121 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 			t.Fatalf("%s should exclude placeholders, NPC corp rows and pre-cycle World API tribes: %#v", path, body.Data)
 		}
 	}
+}
+
+func TestPublicSearchFiltersNonCurrentCharactersAndTribes(t *testing.T) {
+	store := db.NewMemoryStore()
+	ctx := context.Background()
+	cycle6 := 6
+	now := time.Date(2026, 6, 29, 14, 0, 0, 0, time.UTC)
+	source := model.Source{ID: "source:sui:stillness:events", Kind: model.SourceKindSuiEvent, Title: "Sui events", Locator: "fixture", Environment: model.EnvironmentStillness}
+	store.Sources[source.ID] = source
+
+	rows := []struct {
+		entity model.Entity
+		facts  []db.EntityFactDraft
+	}{
+		{
+			entity: model.Entity{
+				ID:          "character:stillness:2112077591",
+				Slug:        "character-2112077591-stillness",
+				Type:        model.EntityTypeCharacter,
+				Name:        "Legacy Cassius 98000422",
+				DisplayName: "Legacy Cassius 98000422",
+				Environment: model.EnvironmentStillness,
+				Cycle:       &cycle6,
+				UpdatedAt:   now,
+			},
+			facts: []db.EntityFactDraft{{
+				Key:          "tribe_id",
+				Value:        "98000422",
+				SourceID:     source.ID,
+				Confidence:   model.ConfidenceVerified,
+				Environment:  model.EnvironmentStillness,
+				ReviewStatus: model.ReviewStatusPublished,
+			}},
+		},
+		{
+			entity: model.Entity{
+				ID:          "character:stillness:2112094000",
+				Slug:        "character-2112094000-stillness",
+				Type:        model.EntityTypeCharacter,
+				Name:        "Current Cassius 98000539",
+				DisplayName: "Current Cassius 98000539",
+				Environment: model.EnvironmentStillness,
+				Cycle:       &cycle6,
+				UpdatedAt:   now.Add(time.Minute),
+			},
+			facts: []db.EntityFactDraft{
+				{
+					Key:          "source_event_kind",
+					Value:        "character.created",
+					SourceID:     source.ID,
+					Confidence:   model.ConfidenceVerified,
+					Environment:  model.EnvironmentStillness,
+					ReviewStatus: model.ReviewStatusPublished,
+				},
+				{
+					Key:          "transaction_digest",
+					Value:        "fixture-digest",
+					SourceID:     source.ID,
+					Confidence:   model.ConfidenceVerified,
+					Environment:  model.EnvironmentStillness,
+					ReviewStatus: model.ReviewStatusPublished,
+				},
+			},
+		},
+		{
+			entity: model.Entity{
+				ID:          "tribe:stillness:98000422",
+				Slug:        "tribe-98000422-stillness",
+				Type:        model.EntityTypeTribe,
+				Name:        "Tribe 98000422",
+				DisplayName: "Tribe 98000422",
+				Environment: model.EnvironmentStillness,
+				Cycle:       &cycle6,
+				UpdatedAt:   now.Add(2 * time.Minute),
+			},
+			facts: []db.EntityFactDraft{{
+				Key:          "tribe_id",
+				Value:        "98000422",
+				SourceID:     source.ID,
+				Confidence:   model.ConfidenceVerified,
+				Environment:  model.EnvironmentStillness,
+				ReviewStatus: model.ReviewStatusPublished,
+			}},
+		},
+	}
+	for _, row := range rows {
+		if err := store.UpsertEntityFacts(ctx, row.entity, row.facts); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	handler := Server{Store: store}.Handler()
+	assertSearchIDs := func(path string, want ...string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s returned status %d body %s", path, res.Code, res.Body.String())
+		}
+		var body struct {
+			Data []model.Entity `json:"data"`
+		}
+		if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		got := make([]string, 0, len(body.Data))
+		for _, entity := range body.Data {
+			got = append(got, entity.ID)
+		}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("%s returned IDs %#v, want %#v", path, got, want)
+		}
+	}
+
+	assertSearchIDs("/v1/search?environment=stillness&q=98000422")
+	assertSearchIDs("/v1/search?environment=stillness&q=Current", "character:stillness:2112094000")
 }
