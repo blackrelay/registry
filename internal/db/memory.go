@@ -230,6 +230,9 @@ func (s *MemoryStore) ListEntities(ctx context.Context, query EntityQuery) (Enti
 		if !cycleInScope(entity.Cycle, query.Cycles, query.IncludeUncycled) {
 			continue
 		}
+		if query.PublicOnly && !hasPublicListedTribeProfile(entity, s.entityFactMapLocked(entity.ID)) {
+			continue
+		}
 		if query.Q != "" && !strings.Contains(strings.ToLower(entity.Name+" "+entity.Slug+" "+entity.DisplayName), strings.ToLower(query.Q)) {
 			continue
 		}
@@ -258,6 +261,14 @@ func (s *MemoryStore) ListEntities(ctx context.Context, query EntityQuery) (Enti
 		next = encoded
 	}
 	return EntityPage{Items: items, NextCursor: next}, nil
+}
+
+func (s *MemoryStore) entityFactMapLocked(entityID string) map[string]any {
+	out := make(map[string]any, len(s.Facts[entityID]))
+	for _, fact := range s.Facts[entityID] {
+		out[fact.Key] = fact.Value
+	}
+	return out
 }
 
 func (s *MemoryStore) entityFactsMatchQueryLocked(entityID string, query EntityQuery) bool {

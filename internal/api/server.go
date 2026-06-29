@@ -742,6 +742,7 @@ func (s Server) entityQueryFromRequest(w http.ResponseWriter, r *http.Request, e
 		Environment:      requestEnvironment(r),
 		Cycles:           scope.Cycles,
 		IncludeUncycled:  scope.IncludeUncycled,
+		PublicOnly:       true,
 		TypeID:           firstNonEmpty(r.URL.Query().Get("type_id"), r.URL.Query().Get("typeId")),
 		GroupID:          firstNonEmpty(r.URL.Query().Get("group_id"), r.URL.Query().Get("groupId")),
 		CategoryID:       firstNonEmpty(r.URL.Query().Get("category_id"), r.URL.Query().Get("categoryId")),
