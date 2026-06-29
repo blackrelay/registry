@@ -279,25 +279,9 @@ func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery
 		return items
 	}
 	out := make([]model.CurrentEntity, 0, len(items))
-	characterIndexes := make(map[string]int)
 	tribeIndexes := make(map[string]int)
 	changed := false
 	for _, item := range items {
-		if key := currentCharacterIdentityKey(item); key != "" {
-			if index, ok := characterIndexes[key]; ok {
-				changed = true
-				existing := out[index]
-				if preferCurrentCharacterIdentity(item, existing) {
-					out[index] = mergeCurrentIdentityRows(item, existing)
-				} else {
-					out[index] = mergeCurrentIdentityRows(existing, item)
-				}
-				continue
-			}
-			characterIndexes[key] = len(out)
-			out = append(out, item)
-			continue
-		}
 		if key := currentTribeIdentityKey(item); key != "" {
 			if index, ok := tribeIndexes[key]; ok {
 				changed = true
@@ -333,24 +317,6 @@ func currentTribeIdentityKey(item model.CurrentEntity) string {
 		return ""
 	}
 	return fmt.Sprintf("%s:%s", item.Entity.Environment, tribeID)
-}
-
-func currentCharacterIdentityKey(item model.CurrentEntity) string {
-	if item.Entity.Type != model.EntityTypeCharacter {
-		return ""
-	}
-	address := strings.ToLower(strings.TrimSpace(factString(item.Facts["character_address"])))
-	if address == "" {
-		return ""
-	}
-	name := strings.ToLower(strings.TrimSpace(nonEmpty(item.Entity.DisplayName, item.Entity.Name)))
-	if name == "" {
-		name = strings.ToLower(strings.TrimSpace(factString(item.Facts["metadata_name"])))
-	}
-	if name == "" || shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
-		return ""
-	}
-	return fmt.Sprintf("%s:%s:%s", item.Entity.Environment, address, name)
 }
 
 func preferCurrentTribeIdentity(candidate, existing model.CurrentEntity) bool {
@@ -389,35 +355,6 @@ func currentTribeIdentityScore(item model.CurrentEntity) int {
 	return score
 }
 
-func preferCurrentCharacterIdentity(candidate, existing model.CurrentEntity) bool {
-	candidateScore := currentCharacterIdentityScore(candidate)
-	existingScore := currentCharacterIdentityScore(existing)
-	if candidateScore != existingScore {
-		return candidateScore > existingScore
-	}
-	if !candidate.Entity.UpdatedAt.Equal(existing.Entity.UpdatedAt) {
-		return candidate.Entity.UpdatedAt.After(existing.Entity.UpdatedAt)
-	}
-	return candidate.Entity.ID > existing.Entity.ID
-}
-
-func currentCharacterIdentityScore(item model.CurrentEntity) int {
-	score := 0
-	if hasEventBackedCharacterEvidence(item) {
-		score += 1000
-	}
-	if item.Entity.Cycle != nil {
-		score += *item.Entity.Cycle * 10
-	}
-	if item.Derived != nil && item.Derived.Profile != nil {
-		score += 5
-	}
-	if !shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
-		score++
-	}
-	return score
-}
-
 func hasEventBackedCharacterEvidence(item model.CurrentEntity) bool {
 	return hasNonEmptyFact(item, "source_event_kind") ||
 		hasNonEmptyFact(item, "source_event_id") ||
@@ -437,21 +374,6 @@ func mergeCurrentTribeIdentityRows(winner, loser model.CurrentEntity) model.Curr
 			return true
 		}
 		return relation.ObjectEntityType == model.EntityTypeTribe && tribeIdentityToken(relation.ObjectEntityID) == winningTribeToken
-	})
-	merged.Derived = nil
-	deriveCurrentEntity(&merged)
-	return merged
-}
-
-func mergeCurrentIdentityRows(winner, loser model.CurrentEntity) model.CurrentEntity {
-	merged := winner
-	merged.Facts = mergeCurrentFacts(winner.Facts, loser.Facts)
-	merged.SourceIDs = mergeSourceIDs(winner.SourceIDs, loser.SourceIDs)
-	merged.OutgoingRelations = mergeCurrentRelations(winner.OutgoingRelations, loser.OutgoingRelations, func(relation model.CurrentRelation) bool {
-		return relation.SubjectEntityID == winner.Entity.ID
-	})
-	merged.IncomingRelations = mergeCurrentRelations(winner.IncomingRelations, loser.IncomingRelations, func(relation model.CurrentRelation) bool {
-		return relation.ObjectEntityID == winner.Entity.ID
 	})
 	merged.Derived = nil
 	deriveCurrentEntity(&merged)
