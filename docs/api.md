@@ -215,7 +215,7 @@ GET /v1/current/ownership
 GET /v1/current/route-edges
 ```
 
-`ownership` returns `owned_by` edges. `route-edges` returns `links_to` and `observed_between` edges. All current-state routes accept `environment`, `cycles`, `limit` and `cursor`. `/v1/current/characters` defaults to `profile=known` so raw placeholder character ids do not dominate public reads; use `profile=placeholder` for diagnostics. Cycle-scoped `/v1/current/tribes` returns public player tribe profiles and excludes raw `Tribe <id>` placeholders and `NPC Corp <id>` rows.
+`ownership` returns `owned_by` edges. `route-edges` returns `links_to` and `observed_between` edges. All current-state routes accept `environment`, `cycles`, `limit` and `cursor`. Cycle-scoped `/v1/current/characters` returns event-backed current characters; use `profile=known` to narrow the response to rows with public profile metadata or `profile=placeholder` for diagnostics. Cycle-scoped `/v1/current/tribes` returns public player tribe profiles and excludes raw `Tribe <id>` placeholders and `NPC Corp <id>` rows.
 
 Additional current-state filters:
 ```text

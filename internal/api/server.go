@@ -313,9 +313,6 @@ func (s Server) currentEntities(entityType model.EntityType) http.HandlerFunc {
 			r.URL.Query().Get("profile_state"),
 			r.URL.Query().Get("profileState"),
 		)
-		if entityType == model.EntityTypeCharacter && profileState == "" {
-			profileState = "known"
-		}
 		page, err := s.Store.ListCurrentEntities(r.Context(), db.CurrentEntityQuery{
 			Type:            entityType,
 			Environment:     requestEnvironment(r),
