@@ -208,6 +208,7 @@ for package_id in $packages; do
 done
 
 run go run ./cmd/br-indexer -mode derive-events -database-url "$DATABASE_URL" -cycles current -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
+run go run ./cmd/br-indexer -mode repair-character-objects -database-url "$DATABASE_URL" -cycles current -derive-batch-size 5000 -concurrency "$CONCURRENCY" -retries 12
 run go run ./cmd/br-indexer -mode derive-objects -database-url "$DATABASE_URL" -cycles current -derive-batch-size 5000
 run go run ./cmd/br-indexer -mode resolve-evidence -database-url "$DATABASE_URL"
 coverage_path="$SUMMARY_PATH.coverage.json"

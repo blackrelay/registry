@@ -71,6 +71,7 @@ Run bounded proofs first:
 go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 5 -concurrency 16
 go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 5 -concurrency 16
 go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
+go run ./cmd/br-indexer -mode repair-character-objects -derive-batch-size 5000 -concurrency 16
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 5000
 go run ./cmd/br-indexer -mode resolve-evidence
 ```
@@ -78,11 +79,12 @@ go run ./cmd/br-indexer -mode resolve-evidence
 Use `-max-pages 0` only for a deliberate full append from saved cursors. If the public Sui GraphQL endpoint reports broad object-by-type scans as outside its consistent range, the Registry records that as a provider-limited source gap. Keep the normal repair path event-first and source-backed:
 ```sh
 go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000
+go run ./cmd/br-indexer -mode repair-character-objects -derive-batch-size 5000 -concurrency 16
 go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-Use World API snapshots for tribe and system metadata when available. Use native static-client decoder artefacts for universe data, enemies, type rows and reviewed recipes. Broad Sui object scans are enrichment evidence for deployments that can query the provider window reliably.
+Use World API snapshots for tribe and system metadata when available. Use native static-client decoder artefacts for universe data, enemies, type rows and reviewed recipes. Direct character-object repair fetches the object IDs already referenced by Cycle 6 character events, which recovers public character metadata without depending on broad object-by-type provider windows. Broad Sui object scans are enrichment evidence for deployments that can query the provider window reliably.
 
 ## Public Exports
 

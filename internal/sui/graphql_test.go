@@ -72,6 +72,20 @@ func TestBuildObjectsRequestUsesTypeFilter(t *testing.T) {
 	}
 }
 
+func TestBuildObjectRequestUsesAddress(t *testing.T) {
+	address := "0x59714bcd14f03bd20794bd3b5a2a52a0045e75e1bc9cc78aada8c56847e5731c"
+	request, err := BuildObjectRequest(ObjectQuery{Address: address})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if request.Variables["address"] != address {
+		t.Fatalf("unexpected address variable %#v", request.Variables["address"])
+	}
+	if _, ok := request.Variables["type"]; ok {
+		t.Fatalf("direct object request should not use a type variable: %#v", request.Variables)
+	}
+}
+
 func TestFetchEventsRetriesHTTPFailures(t *testing.T) {
 	attempts := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +137,40 @@ func TestFetchEventsRetriesHTTPFailures(t *testing.T) {
 	}
 	if len(page.Nodes) != 1 || page.EndCursor != "cursor-1" {
 		t.Fatalf("unexpected page %#v", page)
+	}
+}
+
+func TestFetchObjectDecodesMoveObject(t *testing.T) {
+	objectType := testPackageID + "::character::Character"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+		  "data": {
+		    "object": {
+		      "address": "0xobject",
+		      "digest": "AbcDigest",
+		      "version": 9,
+		      "asMoveObject": {
+		        "contents": {
+		          "type": {"repr": "` + objectType + `"},
+		          "json": {"metadata": {"name": "snek"}}
+		        }
+		      }
+		    }
+		  }
+		}`))
+	}))
+	defer server.Close()
+	client := GraphQLClient{Endpoint: server.URL, AllowInsecure: true}
+	node, ok, err := client.FetchObject(context.Background(), ObjectQuery{Address: "0x59714bcd14f03bd20794bd3b5a2a52a0045e75e1bc9cc78aada8c56847e5731c"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("expected object to be present")
+	}
+	if node.Version.String() != "9" || node.AsMoveObject == nil {
+		t.Fatalf("unexpected object node %#v", node)
 	}
 }
 

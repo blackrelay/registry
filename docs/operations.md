@@ -108,6 +108,7 @@ go run ./cmd/br-indexer -mode audit-stillness -manifest testdata/fixtures/sui-pa
 go run ./cmd/br-indexer -mode events -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 1
 go run ./cmd/br-indexer -mode objects -manifest testdata/fixtures/sui-packages.stillness.json -max-pages 1
 go run ./cmd/br-indexer -mode derive-events -module killmail,character,gate,assembly,storage_unit,turret,rift -derive-batch-size 5000 -max-batches 1
+go run ./cmd/br-indexer -mode repair-character-objects -derive-batch-size 5000 -concurrency 16
 go run ./cmd/br-indexer -mode derive-objects -derive-batch-size 1000 -max-batches 1
 go run ./cmd/br-indexer -mode resolve-evidence
 go run ./cmd/br-indexer -mode audit-killmails -exclude-fixtures -sample-limit 20
@@ -144,7 +145,7 @@ Audit Sui object targets that are currently marked as provider-range blocked whe
 go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fixtures/sui-packages.stillness.json
 ```
 
-The normal Cycle 6 repair path is event backfill and module-scoped `derive-events` for public chain state, followed by World API snapshots for tribe names, descriptions and URLs when available and native static-client decoder artefacts for systems, constellations, regions, enemies, item/type rows and reviewed recipes. Targeted object retry mode remains available when the provider window changes. Complete Sui object coverage still requires explicit coverage evidence.
+The normal Cycle 6 repair path is event backfill and module-scoped `derive-events` for public chain state, direct `repair-character-objects` for character objects referenced by Cycle 6 events, followed by World API snapshots for tribe names, descriptions and URLs when available and native static-client decoder artefacts for systems, constellations, regions, enemies, item/type rows and reviewed recipes. Targeted object retry mode remains available when the provider window changes. Complete Sui object coverage still requires explicit coverage evidence.
 
 Use `br-indexer -mode resolve-evidence` when you want to rerun only the owner-capability and location-hash bridge after importing another public source. It promotes `owner_cap_id` and `location_hash` evidence into `owned_by` and `located_in` relations only when the value maps to exactly one public character or system in the same environment.
 
