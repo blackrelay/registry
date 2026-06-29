@@ -60,7 +60,7 @@ func ParseScope(value string, defaultCurrent bool) (Scope, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		if defaultCurrent {
-			return Scope{Cycles: []int{Current()}, IncludeUncycled: true}, nil
+			return Scope{Cycles: []int{Current()}}, nil
 		}
 		return Scope{}, nil
 	}

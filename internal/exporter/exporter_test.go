@@ -215,30 +215,29 @@ func TestWritePublicExportAppliesCycleScope(t *testing.T) {
 	result, err := WritePublicExport(context.Background(), store, currentDir, ExportOptions{
 		CycleScope:        "current",
 		Cycles:            []int{6},
-		IncludeUncycled:   true,
 		IncludeEvents:     true,
 		IncludeSuiObjects: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.CycleScope != "current" || len(result.Cycles) != 1 || result.Cycles[0] != 6 || !result.IncludeUncycled {
+	if result.CycleScope != "current" || len(result.Cycles) != 1 || result.Cycles[0] != 6 || result.IncludeUncycled {
 		t.Fatalf("catalog did not record cycle scope: %#v", result)
 	}
-	if result.EntityCount != 2 || result.KillmailCount != 1 || result.SourceCount != 2 || result.EventCount != 2 || result.SuiObjectCount != 1 {
+	if result.EntityCount != 1 || result.KillmailCount != 1 || result.SourceCount != 1 || result.EventCount != 1 || result.SuiObjectCount != 1 {
 		t.Fatalf("unexpected scoped export counts: %#v", result)
 	}
 	assertFileContains(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:cycle6")
-	assertFileContains(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:unlabelled")
+	assertFileExcludes(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:unlabelled")
 	assertFileExcludes(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:cycle5")
 	assertFileContains(t, filepath.Join(currentDir, "events.jsonl"), "event:cycle6")
-	assertFileContains(t, filepath.Join(currentDir, "events.jsonl"), "event:unlabelled")
+	assertFileExcludes(t, filepath.Join(currentDir, "events.jsonl"), "event:unlabelled")
 	assertFileExcludes(t, filepath.Join(currentDir, "events.jsonl"), "event:cycle5")
 	assertFileContains(t, filepath.Join(currentDir, "sui_objects.jsonl"), "sui-object:cycle6")
 	assertFileExcludes(t, filepath.Join(currentDir, "sui_objects.jsonl"), "sui-object:cycle5")
 	var manifest ExportManifest
 	readJSONFile(t, filepath.Join(currentDir, "manifest.json"), &manifest)
-	if manifest.CycleScope != "current" || len(manifest.Cycles) != 1 || manifest.Cycles[0] != 6 || !manifest.IncludeUncycled {
+	if manifest.CycleScope != "current" || len(manifest.Cycles) != 1 || manifest.Cycles[0] != 6 || manifest.IncludeUncycled {
 		t.Fatalf("manifest did not record cycle scope: %#v", manifest)
 	}
 }

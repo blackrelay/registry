@@ -7,8 +7,8 @@ func TestIndexerCycleScopeDefaultsToCurrentAndRejectsArchiveOptIn(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(scope.Cycles) != 1 || scope.Cycles[0] != 6 || !scope.IncludeUncycled {
-		t.Fatalf("default cycle scope = %#v, want current cycle plus unlabelled rows", scope)
+	if len(scope.Cycles) != 1 || scope.Cycles[0] != 6 || scope.IncludeUncycled {
+		t.Fatalf("default cycle scope = %#v, want strict current cycle", scope)
 	}
 
 	scope, err = indexerCycleScope("6")

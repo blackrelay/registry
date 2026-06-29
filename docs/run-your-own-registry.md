@@ -92,7 +92,7 @@ go run ./cmd/br-export -out exports
 go run ./cmd/br-export verify -dir exports
 ```
 
-The default export scope is the current cycle plus unlabelled rows. Use `-cycles current` for a strict current-cycle bundle:
+The default export scope is the current cycle. Use `-cycles current` for an explicit current-cycle bundle:
 ```sh
 go run ./cmd/br-export -out exports-current
 ```

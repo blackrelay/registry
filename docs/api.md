@@ -121,7 +121,7 @@ Those fixtures cover the common read shapes for current entities, semantic killm
 `/v1/ops/sui-coverage` includes `range_blocked` targets for Sui object cursors where the public GraphQL endpoint reports `Request is outside consistent range`. These provider-window limits are reported as source-gap evidence while event derivation, World API imports and static-client imports remain the primary repair paths.
 
 ## Cycle Scope
-List, search, current-state, event and killmail endpoints default to the current cycle. The current cycle is Cycle 6, which began at `2026-06-25T09:00:00Z`. The default scope also includes unlabelled compatibility rows so old static imports remain visible until they are reimported with a cycle stamp.
+List, search, current-state, event and killmail endpoints default to the current cycle. The current cycle is Cycle 6, which began at `2026-06-25T09:00:00Z`. Unlabelled compatibility rows and older cycles are not part of the public current scope.
 
 Use `cycles=current` or `cycles=6` for strict Cycle 6 only. Other cycle values are rejected. Older cycle support has been removed from public reads because the Registry does not have complete World API source artefacts for those public identity fields.
 

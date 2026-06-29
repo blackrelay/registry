@@ -39,7 +39,7 @@ func export(args []string) {
 	outputDir := flags.String("out", "exports", "public export output directory")
 	includeEvents := flags.Bool("include-events", false, "include raw indexed events.jsonl")
 	includeSuiObjects := flags.Bool("include-sui-objects", false, "include raw indexed sui_objects.jsonl")
-	cycleScopeValue := flags.String("cycles", "", "cycle scope: current or 6; default is current plus unlabelled rows")
+	cycleScopeValue := flags.String("cycles", "", "cycle scope: current or 6; default is current")
 	registryID := flags.String("registry-id", cfg.InstanceID, "registry instance id emitted in catalog and manifest metadata")
 	apiVersion := flags.String("api-version", cfg.APIVersion, "API version emitted in catalog and manifest metadata")
 	timeout := flags.Duration("timeout", 10*time.Minute, "export timeout")

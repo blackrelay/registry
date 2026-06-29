@@ -47,7 +47,6 @@ func TestExportManifestValidates(t *testing.T) {
 	  "generatedAt": "2026-06-25T12:00:00Z",
 	  "cycleScope": "current",
 	  "cycles": [6],
-	  "includeUncycled": true,
 	  "database": {
 	    "engine": "postgresql",
 	    "database": "blackrelay_registry",
