@@ -220,7 +220,7 @@ go run ./cmd/br-indexer -mode audit-range-blocked-objects -manifest testdata/fix
 go run ./cmd/br-indexer -mode status -export-manifest ./exports/manifest.json
 ```
 
-Provider-limited Sui object scans can return `Request is outside consistent range`. Registry records that as `range_blocked` coverage rather than treating it as a retryable hard failure. Use event backfill and `derive-events` as the primary chain-derived state path. Use `repair-character-objects` to fetch character objects directly by the object IDs referenced by Cycle 6 events. Then use World API and static-client imports for public names and static data.
+Provider-limited Sui object scans can return `Request is outside consistent range`. Registry records that as `range_blocked` coverage rather than treating it as a retryable hard failure. Use event backfill and `derive-events` as the primary chain-derived state path. Use `repair-character-objects` to replay or fetch character objects directly by the object IDs referenced by Cycle 6 events. Then use World API and static-client imports for public names and static data.
 
 Generate and verify public exports:
 ```sh

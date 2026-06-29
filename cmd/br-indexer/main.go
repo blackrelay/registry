@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -18,6 +19,7 @@ import (
 	"github.com/blackrelay/registry/internal/model"
 	"github.com/blackrelay/registry/internal/report"
 	"github.com/blackrelay/registry/internal/sui"
+	"github.com/jackc/pgx/v5"
 )
 
 type listFlag []string
@@ -50,6 +52,7 @@ type characterObjectRepairSummary struct {
 	Endpoint         string            `json:"endpoint"`
 	Candidates       int               `json:"candidates"`
 	ObjectsFetched   int64             `json:"objectsFetched"`
+	ObjectsReplayed  int64             `json:"objectsReplayed"`
 	ObjectsMissing   int64             `json:"objectsMissing"`
 	EntitiesDerived  int64             `json:"entitiesDerived"`
 	RelationsDerived int64             `json:"relationsDerived"`
@@ -60,8 +63,9 @@ type characterObjectRepairSummary struct {
 }
 
 type characterObjectRef struct {
-	EntityID string
-	ObjectID string
+	EntityID        string
+	ObjectID        string
+	HasStoredObject bool
 }
 
 func main() {
@@ -475,9 +479,9 @@ func runRepairCharacterObjects(options indexOptions) {
 		slog.Error("ensure Sui object source", "error", err)
 		os.Exit(1)
 	}
-	refs, err := listMissingCharacterObjectRefs(ctx, store, options)
+	refs, err := listCharacterObjectRepairRefs(ctx, store, options)
 	if err != nil {
-		slog.Error("list missing character object refs", "error", err)
+		slog.Error("list character object repair refs", "error", err)
 		os.Exit(1)
 	}
 	startedAt := time.Now().UTC()
@@ -520,10 +524,11 @@ func runRepairCharacterObjects(options indexOptions) {
 			firstErr = err
 		}
 	}
-	addCounts := func(fetched, missing, entities, relations, killmails int64) {
+	addCounts := func(fetched, replayed, missing, entities, relations, killmails int64) {
 		mu.Lock()
 		defer mu.Unlock()
 		summary.ObjectsFetched += fetched
+		summary.ObjectsReplayed += replayed
 		summary.ObjectsMissing += missing
 		summary.EntitiesDerived += entities
 		summary.RelationsDerived += relations
@@ -534,22 +539,13 @@ func runRepairCharacterObjects(options indexOptions) {
 		go func() {
 			defer wg.Done()
 			for ref := range jobs {
-				node, ok, err := client.FetchObject(ctx, sui.ObjectQuery{Address: ref.ObjectID})
+				record, ok, fetched, err := repairCharacterObjectRecord(ctx, store, client, source, ref, options)
 				if err != nil {
-					addError(fmt.Errorf("fetch object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					addError(err)
 					continue
 				}
 				if !ok {
-					addCounts(0, 1, 0, 0, 0)
-					continue
-				}
-				record, err := sui.NormalizeMoveObject(node, sui.NormalizeOptions{
-					Environment: options.environment,
-					SourceID:    source.ID,
-					FetchedAt:   time.Now().UTC(),
-				})
-				if err != nil {
-					addError(fmt.Errorf("normalise object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
+					addCounts(0, 0, 1, 0, 0, 0)
 					continue
 				}
 				if err := store.UpsertSuiObject(ctx, record); err != nil {
@@ -565,7 +561,11 @@ func runRepairCharacterObjects(options indexOptions) {
 					addError(fmt.Errorf("derive object %s for %s: %w", ref.ObjectID, ref.EntityID, err))
 					continue
 				}
-				addCounts(1, 0, int64(len(graph.Entities)), int64(len(graph.Relations)), int64(len(graph.Killmails)))
+				if fetched {
+					addCounts(1, 0, 0, int64(len(graph.Entities)), int64(len(graph.Relations)), int64(len(graph.Killmails)))
+				} else {
+					addCounts(0, 1, 0, int64(len(graph.Entities)), int64(len(graph.Relations)), int64(len(graph.Killmails)))
+				}
 			}
 		}()
 	}
@@ -582,7 +582,65 @@ func runRepairCharacterObjects(options indexOptions) {
 	}
 }
 
-func listMissingCharacterObjectRefs(ctx context.Context, store db.PostgresStore, options indexOptions) ([]characterObjectRef, error) {
+func repairCharacterObjectRecord(ctx context.Context, store db.PostgresStore, client sui.GraphQLClient, source model.Source, ref characterObjectRef, options indexOptions) (db.SuiObjectRecord, bool, bool, error) {
+	if ref.HasStoredObject {
+		record, ok, err := loadSuiObjectRecord(ctx, store, options.environment, ref.ObjectID)
+		if err != nil {
+			return db.SuiObjectRecord{}, false, false, fmt.Errorf("load stored object %s for %s: %w", ref.ObjectID, ref.EntityID, err)
+		}
+		if ok {
+			return record, true, false, nil
+		}
+	}
+	node, ok, err := client.FetchObject(ctx, sui.ObjectQuery{Address: ref.ObjectID})
+	if err != nil {
+		return db.SuiObjectRecord{}, false, false, fmt.Errorf("fetch object %s for %s: %w", ref.ObjectID, ref.EntityID, err)
+	}
+	if !ok {
+		return db.SuiObjectRecord{}, false, true, nil
+	}
+	record, err := sui.NormalizeMoveObject(node, sui.NormalizeOptions{
+		Environment: options.environment,
+		SourceID:    source.ID,
+		FetchedAt:   time.Now().UTC(),
+	})
+	if err != nil {
+		return db.SuiObjectRecord{}, false, true, fmt.Errorf("normalise object %s for %s: %w", ref.ObjectID, ref.EntityID, err)
+	}
+	return record, true, true, nil
+}
+
+func loadSuiObjectRecord(ctx context.Context, store db.PostgresStore, environment model.Environment, objectID string) (db.SuiObjectRecord, bool, error) {
+	if store.Pool == nil {
+		return db.SuiObjectRecord{}, false, fmt.Errorf("postgres pool is nil")
+	}
+	var record db.SuiObjectRecord
+	var payload []byte
+	err := store.Pool.QueryRow(ctx, `
+		SELECT id, object_id, environment, type_repr, coalesce(package_id, ''), coalesce(module, ''),
+		  coalesce(type_name, ''), coalesce(version, ''), coalesce(digest, ''), coalesce(source_id, ''),
+		  payload_json, observed_at
+		FROM sui_objects
+		WHERE environment = $1
+		  AND lower(object_id) = lower($2)
+		ORDER BY observed_at DESC, id DESC
+		LIMIT 1
+	`, environment, objectID).Scan(&record.ID, &record.ObjectID, &record.Environment, &record.TypeRepr, &record.PackageID, &record.Module, &record.TypeName, &record.Version, &record.Digest, &record.SourceID, &payload, &record.ObservedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.SuiObjectRecord{}, false, nil
+	}
+	if err != nil {
+		return db.SuiObjectRecord{}, false, err
+	}
+	if len(payload) > 0 {
+		if err := json.Unmarshal(payload, &record.Payload); err != nil {
+			return db.SuiObjectRecord{}, false, err
+		}
+	}
+	return record, true, nil
+}
+
+func listCharacterObjectRepairRefs(ctx context.Context, store db.PostgresStore, options indexOptions) ([]characterObjectRef, error) {
 	if store.Pool == nil {
 		return nil, fmt.Errorf("postgres pool is nil")
 	}
@@ -591,7 +649,9 @@ func listMissingCharacterObjectRefs(ctx context.Context, store db.PostgresStore,
 WITH event_characters AS (
   SELECT
     e.id AS entity_id,
-    max(CASE WHEN f.key = 'character_id' THEN f.value_json #>> '{}' END) AS object_id
+    max(CASE WHEN f.key = 'character_id' THEN f.value_json #>> '{}' END) AS object_id,
+    (e.name = 'Character ' || regexp_replace(e.id, '^.*:', '')
+      AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)) AS is_placeholder
   FROM entities e
   JOIN entity_facts f ON f.entity_id = e.id
   WHERE e.environment = $1
@@ -601,9 +661,15 @@ WITH event_characters AS (
   HAVING bool_or(f.key IN ('source_event_kind', 'source_event_id', 'transaction_digest'))
      AND max(CASE WHEN f.key = 'character_id' THEN f.value_json #>> '{}' END) ~ '^0x[0-9a-fA-F]{64}$'
 )
-SELECT entity_id, object_id
+SELECT entity_id, object_id, EXISTS (
+  SELECT 1
+  FROM sui_objects o
+  WHERE o.environment = $1
+    AND lower(o.object_id) = lower(ec.object_id)
+) AS has_stored_object
 FROM event_characters ec
-WHERE NOT EXISTS (
+WHERE is_placeholder
+   OR NOT EXISTS (
   SELECT 1
   FROM sui_objects o
   WHERE o.environment = $1
@@ -619,7 +685,7 @@ LIMIT $2`
 	var refs []characterObjectRef
 	for rows.Next() {
 		var ref characterObjectRef
-		if err := rows.Scan(&ref.EntityID, &ref.ObjectID); err != nil {
+		if err := rows.Scan(&ref.EntityID, &ref.ObjectID, &ref.HasStoredObject); err != nil {
 			return nil, err
 		}
 		refs = append(refs, ref)
