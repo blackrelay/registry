@@ -324,6 +324,52 @@ func TestCurrentCycleCharacterQueryRejectsObjectOnlyRows(t *testing.T) {
 	}
 }
 
+func TestCurrentCycleTribeQueryRejectsPlaceholderAndNPCCorpRows(t *testing.T) {
+	query := CurrentEntityQuery{
+		Type:        model.EntityTypeTribe,
+		Environment: model.EnvironmentStillness,
+		Cycles:      []int{6},
+	}
+	publicTribe := model.CurrentEntity{
+		Entity: model.Entity{
+			ID:          "tribe:stillness:1000167",
+			Type:        model.EntityTypeTribe,
+			Name:        "Clonebank 86",
+			DisplayName: "Clonebank 86",
+			Environment: model.EnvironmentStillness,
+			Cycle:       intPtr(6),
+		},
+		Facts: map[string]any{"tribe_id": "1000167", "tag": "CO86"},
+	}
+	deriveCurrentEntity(&publicTribe)
+	if !currentEntityMatchesQuery(publicTribe, query) {
+		t.Fatalf("Cycle-scoped tribe query rejected public tribe row")
+	}
+
+	placeholder := publicTribe
+	placeholder.Entity.ID = "tribe:stillness:98000539"
+	placeholder.Entity.Name = "Tribe 98000539"
+	placeholder.Entity.DisplayName = "Tribe 98000539"
+	placeholder.Facts = map[string]any{"tribe_id": "98000539"}
+	deriveCurrentEntity(&placeholder)
+	if currentEntityMatchesQuery(placeholder, query) {
+		t.Fatalf("Cycle-scoped tribe query matched placeholder tribe row")
+	}
+	if !currentEntityMatchesQuery(placeholder, CurrentEntityQuery{Type: model.EntityTypeTribe}) {
+		t.Fatalf("unscoped tribe query should still be able to inspect raw placeholder evidence")
+	}
+
+	npcCorp := publicTribe
+	npcCorp.Entity.ID = "tribe:stillness:1000167:npc"
+	npcCorp.Entity.Name = "NPC Corp 1000167"
+	npcCorp.Entity.DisplayName = "NPC Corp 1000167"
+	npcCorp.Facts = map[string]any{"tribe_id": "1000167", "tag": "C086"}
+	deriveCurrentEntity(&npcCorp)
+	if currentEntityMatchesQuery(npcCorp, query) {
+		t.Fatalf("Cycle-scoped tribe query matched NPC corp tribe row")
+	}
+}
+
 func TestDedupeCurrentTribeIdentitiesPrefersNamedProfileRow(t *testing.T) {
 	now := time.Date(2026, 6, 28, 10, 30, 45, 0, time.UTC)
 	items := []model.CurrentEntity{

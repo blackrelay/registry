@@ -1548,7 +1548,7 @@ func TestCurrentEndpointsFilterByProfileAndEvidenceState(t *testing.T) {
 	}
 }
 
-func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testing.T) {
+func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 	store := db.NewMemoryStore()
 	ctx := context.Background()
 	cycle6 := 6
@@ -1575,6 +1575,16 @@ func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testin
 		Cycle:       &cycle6,
 		UpdatedAt:   now,
 	}
+	npcCorp := model.Entity{
+		ID:          "tribe:stillness:1000167:npc",
+		Slug:        "tribe-1000167-npc-stillness",
+		Type:        model.EntityTypeTribe,
+		Name:        "NPC Corp 1000167",
+		DisplayName: "NPC Corp 1000167",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		UpdatedAt:   now.Add(time.Minute),
+	}
 	if err := store.UpsertEntityFacts(ctx, reviewed, []db.EntityFactDraft{{
 		Key:          "display_name",
 		Value:        "Black Relay",
@@ -1595,6 +1605,26 @@ func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testin
 	}}); err != nil {
 		t.Fatal(err)
 	}
+	if err := store.UpsertEntityFacts(ctx, npcCorp, []db.EntityFactDraft{
+		{
+			Key:          "tribe_id",
+			Value:        "1000167",
+			SourceID:     "source:world-api:stillness:tribes",
+			Confidence:   model.ConfidenceVerified,
+			Environment:  model.EnvironmentStillness,
+			ReviewStatus: model.ReviewStatusPublished,
+		},
+		{
+			Key:          "tag",
+			Value:        "C086",
+			SourceID:     "source:world-api:stillness:tribes",
+			Confidence:   model.ConfidenceVerified,
+			Environment:  model.EnvironmentStillness,
+			ReviewStatus: model.ReviewStatusPublished,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	handler := Server{Store: store}.Handler()
 	req := httptest.NewRequest(http.MethodGet, "/v1/current/tribes?environment=stillness", nil)
@@ -1609,10 +1639,10 @@ func TestCurrentTribesEndpointOrdersReviewedProfilesBeforePlaceholders(t *testin
 	if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
 		t.Fatal(err)
 	}
-	if len(body.Data) != 2 {
-		t.Fatalf("expected two tribe rows, got %#v", body.Data)
+	if len(body.Data) != 1 {
+		t.Fatalf("expected one public tribe row, got %#v", body.Data)
 	}
 	if body.Data[0].Entity.ID != reviewed.ID {
-		t.Fatalf("reviewed tribe should sort before placeholder tribe: %#v", body.Data)
+		t.Fatalf("current tribes should exclude placeholders and NPC corp rows: %#v", body.Data)
 	}
 }

@@ -184,6 +184,9 @@ func currentEntityMatchesQuery(item model.CurrentEntity, query CurrentEntityQuer
 	if currentScopedCharacterEvidenceRequired(query) && item.Entity.Type == model.EntityTypeCharacter && !hasEventBackedCharacterEvidence(item) {
 		return false
 	}
+	if currentScopedTribeProfileRequired(query) && item.Entity.Type == model.EntityTypeTribe && !hasPublicCurrentTribeProfile(item) {
+		return false
+	}
 	if query.ProfileState != "" && !matchesProfileState(item, query.ProfileState) {
 		return false
 	}
@@ -240,6 +243,35 @@ func currentEntityMatchesQuery(item model.CurrentEntity, query CurrentEntityQuer
 
 func currentScopedCharacterEvidenceRequired(query CurrentEntityQuery) bool {
 	return len(query.Cycles) > 0
+}
+
+func currentScopedTribeProfileRequired(query CurrentEntityQuery) bool {
+	return len(query.Cycles) > 0
+}
+
+func hasPublicCurrentTribeProfile(item model.CurrentEntity) bool {
+	if item.Entity.Type != model.EntityTypeTribe {
+		return true
+	}
+	name := strings.TrimSpace(nonEmpty(item.Entity.DisplayName, item.Entity.Name))
+	if name == "" {
+		return false
+	}
+	tribeID := tribeIdentityToken(item.Entity.ID)
+	if tribeID == "" {
+		tribeID = strings.TrimSpace(fmt.Sprint(item.Facts["tribe_id"]))
+	}
+	if tribeID != "" && strings.EqualFold(name, "Tribe "+tribeID) {
+		return false
+	}
+	if shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
+		return false
+	}
+	return !isNPCTribeName(name)
+}
+
+func isNPCTribeName(name string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), "npc corp ")
 }
 
 func dedupeCurrentEntities(items []model.CurrentEntity, query CurrentEntityQuery) []model.CurrentEntity {
