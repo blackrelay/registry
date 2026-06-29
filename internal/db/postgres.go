@@ -537,6 +537,9 @@ func (s PostgresStore) ListEntities(ctx context.Context, query EntityQuery) (Ent
 		where += fmt.Sprintf(" AND e.environment = $%d", len(args))
 	}
 	where = addCycleColumnFilter(&args, where, "e.cycle", query.Cycles, query.IncludeUncycled)
+	if query.PublicOnly {
+		where += " AND " + publicListedTribeSQL()
+	}
 	if query.Q != "" {
 		args = append(args, query.Q)
 		qArg := len(args)
@@ -728,15 +731,37 @@ func currentPublicTribeSQL() string {
 			nullif(` + displayName + `, '') IS NOT NULL
 			AND lower(` + displayName + `) <> lower('Tribe ' || regexp_replace(e.id, '^.*:', ''))
 			AND lower(` + displayName + `) NOT LIKE 'npc corp %'
-			AND (
-				regexp_replace(e.id, '^.*:', '') = '1000167'
-				OR (
-					regexp_replace(e.id, '^.*:', '') ~ '^[0-9]+$'
-					AND regexp_replace(e.id, '^.*:', '')::bigint >= 98000535
-				)
-			)
+			AND CASE
+				WHEN regexp_replace(e.id, '^.*:', '') ~ '^[0-9]+$'
+				THEN regexp_replace(e.id, '^.*:', '') = '1000167'
+					OR regexp_replace(e.id, '^.*:', '')::bigint >= 98000535
+				ELSE false
+			END
 			AND NOT (
 				e.name = 'Tribe ' || regexp_replace(e.id, '^.*:', '')
+				AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)
+			)
+		)
+	)`
+}
+
+func publicListedTribeSQL() string {
+	displayName := `coalesce(nullif(btrim(coalesce(e.display_name, '')), ''), nullif(btrim(e.name), ''), '')`
+	tribeID := `regexp_replace(e.id, '^.*:', '')`
+	return `(
+		e.entity_type <> 'tribe'
+		OR (
+			nullif(` + displayName + `, '') IS NOT NULL
+			AND lower(` + displayName + `) <> lower('Tribe ' || ` + tribeID + `)
+			AND lower(` + displayName + `) NOT LIKE 'npc corp %'
+			AND CASE
+				WHEN ` + tribeID + ` ~ '^[0-9]+$'
+				THEN ` + tribeID + ` = '1000167'
+					OR ` + tribeID + `::bigint >= 98000535
+				ELSE true
+			END
+			AND NOT (
+				e.name = 'Tribe ' || ` + tribeID + `
 				AND (coalesce(e.display_name, '') = '' OR e.display_name = e.name)
 			)
 		)

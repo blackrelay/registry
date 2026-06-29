@@ -148,6 +148,8 @@ cursor
 
 The implementation uses the same keyset pagination contract as `/v1/entities`.
 
+Default public search and entity-list reads suppress raw tribe placeholder rows, `NPC Corp <id>` rows and pre-cycle public tribe ids. Those source rows remain in the Registry evidence graph but they are not part of the public Cycle 6 discovery surface.
+
 The exact fact filters are intended for static-client type metadata. `type_id` and `group_id` match numeric static-client facts as strings, `source_artefact_id` narrows results to one registered artefact and `static_entity_type` matches the normalised entity type derived from static rows.
 
 ## Entity Provenance

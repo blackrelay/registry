@@ -13,6 +13,7 @@ type EntityQuery struct {
 	Environment      model.Environment
 	Cycles           []int
 	IncludeUncycled  bool
+	PublicOnly       bool
 	TypeID           string
 	GroupID          string
 	CategoryID       string

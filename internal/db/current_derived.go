@@ -254,25 +254,55 @@ func hasPublicCurrentTribeProfile(item model.CurrentEntity) bool {
 	if item.Entity.Type != model.EntityTypeTribe {
 		return true
 	}
-	name := strings.TrimSpace(nonEmpty(item.Entity.DisplayName, item.Entity.Name))
+	return hasPublicTribeProfile(item.Entity, item.Facts, false)
+}
+
+func hasPublicListedTribeProfile(entity model.Entity, facts map[string]any) bool {
+	if entity.Type != model.EntityTypeTribe {
+		return true
+	}
+	return hasPublicTribeProfile(entity, facts, true)
+}
+
+func hasPublicTribeProfile(entity model.Entity, facts map[string]any, allowNonNumericID bool) bool {
+	name := strings.TrimSpace(nonEmpty(entity.DisplayName, entity.Name))
 	if name == "" {
 		return false
 	}
-	tribeID := tribeIdentityToken(item.Entity.ID)
+	tribeID := tribeIdentityToken(entity.ID)
 	if tribeID == "" {
-		tribeID = strings.TrimSpace(fmt.Sprint(item.Facts["tribe_id"]))
+		tribeID = strings.TrimSpace(fmt.Sprint(facts["tribe_id"]))
 	}
 	if tribeID != "" && strings.EqualFold(name, "Tribe "+tribeID) {
 		return false
 	}
-	if shouldPreserveExistingEntityOnPlaceholder(item.Entity) {
+	if shouldPreserveExistingEntityOnPlaceholder(entity) {
 		return false
 	}
-	return !isNPCTribeName(name) && isCycle6PublicTribeID(tribeID)
+	if isNPCTribeName(name) {
+		return false
+	}
+	if allowNonNumericID && !isNumericTribeID(tribeID) {
+		return true
+	}
+	return isCycle6PublicTribeID(tribeID)
 }
 
 func isNPCTribeName(name string) bool {
 	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), "npc corp ")
+}
+
+func isNumericTribeID(tribeID string) bool {
+	tribeID = strings.TrimSpace(tribeID)
+	if tribeID == "" {
+		return false
+	}
+	for _, r := range tribeID {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func isCycle6PublicTribeID(tribeID string) bool {

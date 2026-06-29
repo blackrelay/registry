@@ -1690,4 +1690,28 @@ func TestCurrentTribesEndpointFiltersPlaceholdersAndNPCCorps(t *testing.T) {
 	if body.Data[0].Entity.ID != reviewed.ID {
 		t.Fatalf("current tribes should exclude placeholders, NPC corp rows and pre-cycle World API tribes: %#v", body.Data)
 	}
+
+	for _, path := range []string{
+		"/v1/tribes?environment=stillness",
+		"/v1/search?environment=stillness&type=tribe",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s returned status %d body %s", path, res.Code, res.Body.String())
+		}
+		var body struct {
+			Data []model.Entity `json:"data"`
+		}
+		if err := json.Unmarshal(res.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if len(body.Data) != 1 {
+			t.Fatalf("%s should expose one public tribe row, got %#v", path, body.Data)
+		}
+		if body.Data[0].ID != reviewed.ID {
+			t.Fatalf("%s should exclude placeholders, NPC corp rows and pre-cycle World API tribes: %#v", path, body.Data)
+		}
+	}
 }
