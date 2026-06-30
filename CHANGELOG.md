@@ -2,6 +2,37 @@
 
 All notable changes to Black Relay Registry are recorded here.
 
+## [1.1.0] - 2026-06-30
+
+### Changed
+- Enforced strict Cycle 6 public scope for current exports, search and typed public reads.
+- Removed legacy Cycle 5 and `all` cycle options from the supported public Registry read path.
+- Limited current public character rows to event-backed Cycle 6 character evidence.
+- Limited current public tribe rows to source-backed Cycle 6 public tribe profiles and the known Clonebank identity.
+- Aligned public export filtering with the API current-state filtering rules so R2 and D1 consumers receive the same public scope.
+
+### Fixed
+- Repaired event-referenced character objects so Cycle 6 character metadata can be recovered without relying on broad object-by-type scans.
+- Preserved current character item IDs while merging repaired object-backed metadata.
+- Filtered stale object-only character rows out of public current character counts and search results.
+- Filtered placeholder tribe rows, NPC corporation rows and pre-cycle public tribe IDs out of public current tribe results.
+- Deduplicated equivalent current tribe identities such as `tribe:stillness:<id>` and raw `<id>` rows.
+- Ensured current-cycle exports do not reintroduce older-cycle rows after API or D1 rebuilds.
+
+### Operations
+- Added the expected post-upgrade repair path: backfill events, derive current event semantics, replay event-referenced character objects then generate and verify current exports.
+- Documented that D1 public API stores should be rebuilt from a verified current export after this upgrade because incremental raw syncs cannot repair earlier loose-scope current rows.
+
+### Known Limits
+- World API tribe profile evidence can lag chain events.
+- Sui object-by-type scans remain subject to upstream provider range windows.
+- Rows without enough public source evidence remain canonical PostgreSQL evidence rather than resolved public current identities.
+
+## [1.0.1] - 2026-06-29
+
+### Fixed
+- Corrected release metadata after the first public release flow.
+
 ## [1.0.0] - 2026-06-27
 
 ### Added

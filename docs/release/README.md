@@ -143,4 +143,5 @@ Select-String -Path .\SHA2-256SUMS -Pattern "br-registry_windows_amd64.exe"
 The Windows example compares one downloaded file. The Linux example can verify every downloaded file present in the working directory.
 
 # Version Notes
-- [v1.0.0](v1.0.0.md): first Registry release notes and verification instructions.
+- [v1.1.0](v1.1.0.md): Cycle 6 public-scope correctness, character repair and current export filtering.
+- [v1.0.1](v1.0.1.md): release metadata correction after the first public release flow.
