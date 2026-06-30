@@ -270,6 +270,30 @@ func TestDeriveEntitiesFromEventAssignsTimestampCycle(t *testing.T) {
 	}
 }
 
+func TestDeriveEntitiesFromEventRejectsMismatchedTenant(t *testing.T) {
+	event := db.EventRecord{
+		ID:          "event:mismatched-tenant:0",
+		Kind:        "character.created",
+		Environment: model.EnvironmentStillness,
+		OccurredAt:  time.Date(2026, 6, 25, 9, 0, 0, 0, time.UTC),
+		Module:      "character",
+		SourceID:    "source:sui:sui-testnet:graphql",
+		Payload: map[string]any{
+			"json": map[string]any{
+				"assembly_key":      map[string]any{"tenant": "liminality", "item_id": "2112000001"},
+				"character_id":      "0xcharacter",
+				"tribe_id":          "1000167",
+				"character_address": "0xwallet",
+			},
+		},
+	}
+
+	derived := DeriveEntitiesFromEvent(event)
+	if len(derived.Entities) != 0 || len(derived.Relations) != 0 || len(derived.Killmails) != 0 {
+		t.Fatalf("mismatched tenant event derived data: %#v", derived)
+	}
+}
+
 func TestDeriveEntitiesFromCharacterCreatedEventUsesMetadataProfile(t *testing.T) {
 	event := db.EventRecord{
 		ID:          "event:character-profile:0",

@@ -196,6 +196,14 @@ func TestWritePublicExportAppliesCycleScope(t *testing.T) {
 	for _, item := range []db.EventRecord{
 		{ID: "event:cycle5", Kind: "fixture", Environment: model.EnvironmentStillness, OccurredAt: cycle5Time, Cycle: &cycle5, Payload: map[string]any{"kind": "fixture"}},
 		{ID: "event:cycle6", Kind: "fixture", Environment: model.EnvironmentStillness, OccurredAt: cycle6Time, Cycle: &cycle6, Payload: map[string]any{"kind": "fixture"}},
+		{ID: "event:mismatched-tenant", Kind: "character.created", Environment: model.EnvironmentStillness, OccurredAt: cycle6Time.Add(time.Minute), Cycle: &cycle6, Payload: map[string]any{
+			"json": map[string]any{
+				"assembly_key": map[string]any{
+					"tenant":  "liminality",
+					"item_id": "2112000001",
+				},
+			},
+		}},
 		{ID: "event:unlabelled", Kind: "fixture", Environment: model.EnvironmentStillness, OccurredAt: cycle6Time.Add(time.Minute), Payload: map[string]any{"kind": "fixture"}},
 	} {
 		if err := store.UpsertSuiEvent(context.Background(), item); err != nil {
@@ -205,6 +213,14 @@ func TestWritePublicExportAppliesCycleScope(t *testing.T) {
 	for _, item := range []db.SuiObjectRecord{
 		{ID: "sui-object:cycle5", ObjectID: "0x5", Environment: model.EnvironmentStillness, TypeRepr: "0x2::fixture::Object", ObservedAt: cycle5Time, Payload: map[string]any{"kind": "fixture"}},
 		{ID: "sui-object:cycle6", ObjectID: "0x6", Environment: model.EnvironmentStillness, TypeRepr: "0x2::fixture::Object", ObservedAt: cycle6Time, Payload: map[string]any{"kind": "fixture"}},
+		{ID: "sui-object:mismatched-tenant", ObjectID: "0xliminality", Environment: model.EnvironmentStillness, TypeRepr: "0x2::character::Character", ObservedAt: cycle6Time.Add(time.Minute), Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{
+					"tenant":  "liminality",
+					"item_id": "2112000001",
+				},
+			},
+		}},
 	} {
 		if err := store.UpsertSuiObject(context.Background(), item); err != nil {
 			t.Fatal(err)
@@ -231,14 +247,168 @@ func TestWritePublicExportAppliesCycleScope(t *testing.T) {
 	assertFileExcludes(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:unlabelled")
 	assertFileExcludes(t, filepath.Join(currentDir, "entities.jsonl"), "character:stillness:cycle5")
 	assertFileContains(t, filepath.Join(currentDir, "events.jsonl"), "event:cycle6")
+	assertFileExcludes(t, filepath.Join(currentDir, "events.jsonl"), "event:mismatched-tenant")
 	assertFileExcludes(t, filepath.Join(currentDir, "events.jsonl"), "event:unlabelled")
 	assertFileExcludes(t, filepath.Join(currentDir, "events.jsonl"), "event:cycle5")
 	assertFileContains(t, filepath.Join(currentDir, "sui_objects.jsonl"), "sui-object:cycle6")
+	assertFileExcludes(t, filepath.Join(currentDir, "sui_objects.jsonl"), "sui-object:mismatched-tenant")
 	assertFileExcludes(t, filepath.Join(currentDir, "sui_objects.jsonl"), "sui-object:cycle5")
 	var manifest ExportManifest
 	readJSONFile(t, filepath.Join(currentDir, "manifest.json"), &manifest)
 	if manifest.CycleScope != "current" || len(manifest.Cycles) != 1 || manifest.Cycles[0] != 6 || manifest.IncludeUncycled {
 		t.Fatalf("manifest did not record cycle scope: %#v", manifest)
+	}
+}
+
+func TestWritePublicExportTrimsCurrentTribeMembersToCreatedCycleCharacters(t *testing.T) {
+	ctx := context.Background()
+	store := db.NewMemoryStore()
+	cycle6 := 6
+	now := time.Date(2026, 6, 28, 12, 0, 0, 0, time.UTC)
+	source := model.Source{
+		ID:          "source:sui",
+		Kind:        model.SourceKindSuiEvent,
+		Title:       "Sui events",
+		Locator:     "fixture",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		CreatedAt:   now,
+	}
+	if err := store.EnsureSource(ctx, source); err != nil {
+		t.Fatal(err)
+	}
+	secondarySource := source
+	secondarySource.ID = "source:sui:object"
+	secondarySource.Title = "Sui objects"
+	if err := store.EnsureSource(ctx, secondarySource); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UpsertSuiEvent(ctx, db.EventRecord{
+		ID:          "event:created:valid",
+		Kind:        "character.created",
+		Environment: model.EnvironmentStillness,
+		OccurredAt:  now,
+		Cycle:       &cycle6,
+		SourceID:    source.ID,
+		Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{"tenant": "stillness", "item_id": "2112099999"},
+			},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	tribe := model.Entity{
+		ID:          "tribe:stillness:1000167",
+		Slug:        "tribe-1000167-stillness",
+		Type:        model.EntityTypeTribe,
+		Name:        "Clonebank 86",
+		DisplayName: "Clonebank 86",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		UpdatedAt:   now,
+	}
+	validCharacter := model.Entity{
+		ID:          "character:stillness:2112099999",
+		Slug:        "character-2112099999-stillness",
+		Type:        model.EntityTypeCharacter,
+		Name:        "Current Pilot",
+		DisplayName: "Current Pilot",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		UpdatedAt:   now,
+	}
+	staleCharacter := model.Entity{
+		ID:          "character:stillness:2112088888",
+		Slug:        "character-2112088888-stillness",
+		Type:        model.EntityTypeCharacter,
+		Name:        "Killmail Placeholder",
+		DisplayName: "Killmail Placeholder",
+		Environment: model.EnvironmentStillness,
+		Cycle:       &cycle6,
+		UpdatedAt:   now,
+	}
+	if err := store.UpsertEntityFacts(ctx, tribe, []db.EntityFactDraft{
+		{Key: "tribe_id", Value: "1000167", SourceID: source.ID, Environment: model.EnvironmentStillness, Cycle: &cycle6},
+		{Key: "tag", Value: "CO86", SourceID: source.ID, Environment: model.EnvironmentStillness, Cycle: &cycle6},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UpsertEntityFacts(ctx, validCharacter, []db.EntityFactDraft{
+		{Key: "source_event_kind", Value: "character.created", SourceID: source.ID, Environment: model.EnvironmentStillness, Cycle: &cycle6},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UpsertEntityFacts(ctx, staleCharacter, []db.EntityFactDraft{
+		{Key: "source_event_kind", Value: "killmail.created", SourceID: source.ID, Environment: model.EnvironmentStillness, Cycle: &cycle6},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.UpsertRelations(ctx, []db.RelationDraft{
+		{SubjectEntityID: validCharacter.ID, Predicate: "belongs_to", ObjectEntityID: tribe.ID, SourceID: source.ID, Environment: model.EnvironmentStillness},
+		{SubjectEntityID: validCharacter.ID, Predicate: "belongs_to", ObjectEntityID: tribe.ID, SourceID: secondarySource.ID, Environment: model.EnvironmentStillness},
+		{SubjectEntityID: staleCharacter.ID, Predicate: "belongs_to", ObjectEntityID: tribe.ID, SourceID: source.ID, Environment: model.EnvironmentStillness},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	dir := t.TempDir()
+	if _, err := WritePublicExport(ctx, store, dir, ExportOptions{
+		CycleScope: "current",
+		Cycles:     []int{6},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	current := readCurrentEntityExportRow(t, filepath.Join(dir, "current_entities.jsonl"), tribe.ID)
+	if current.Derived == nil || current.Derived.MemberCount != 1 {
+		t.Fatalf("expected tribe member count to include only created characters, got %#v", current.Derived)
+	}
+	if len(current.IncomingRelations) != 1 || current.IncomingRelations[0].SubjectEntityID != validCharacter.ID {
+		t.Fatalf("expected only current created character relation, got %#v", current.IncomingRelations)
+	}
+}
+
+func TestFilterCurrentTribeMemberRelationsUsesSelectedCurrentTribe(t *testing.T) {
+	tribe := model.CurrentEntity{
+		Entity: model.Entity{
+			ID:   "tribe:stillness:1000167",
+			Type: model.EntityTypeTribe,
+		},
+		Derived: &model.CurrentDerived{MemberCount: 2},
+		IncomingRelations: []model.CurrentRelation{
+			{
+				SubjectEntityID:   "character:stillness:2112099999",
+				SubjectEntityType: model.EntityTypeCharacter,
+				Predicate:         "belongs_to",
+				ObjectEntityID:    "tribe:stillness:1000167",
+				ObjectEntityType:  model.EntityTypeTribe,
+			},
+			{
+				SubjectEntityID:   "character:stillness:2112097777",
+				SubjectEntityType: model.EntityTypeCharacter,
+				Predicate:         "belongs_to",
+				ObjectEntityID:    "tribe:stillness:1000167",
+				ObjectEntityType:  model.EntityTypeTribe,
+			},
+		},
+	}
+	currentCharacterIDs := map[string]struct{}{
+		"character:stillness:2112099999": {},
+		"character:stillness:2112097777": {},
+	}
+	currentCharacterTribeIDs := map[string]string{
+		"character:stillness:2112099999": "tribe:stillness:1000167",
+		"character:stillness:2112097777": "tribe:stillness:98000539",
+	}
+
+	filterCurrentTribeMemberRelations(&tribe, currentCharacterIDs, currentCharacterTribeIDs)
+
+	if tribe.Derived == nil || tribe.Derived.MemberCount != 1 {
+		t.Fatalf("expected only selected current tribe member to be counted, got %#v", tribe.Derived)
+	}
+	if len(tribe.IncomingRelations) != 1 || tribe.IncomingRelations[0].SubjectEntityID != "character:stillness:2112099999" {
+		t.Fatalf("expected stale current tribe edge to be filtered, got %#v", tribe.IncomingRelations)
 	}
 }
 
@@ -618,6 +788,28 @@ func verifyFile(t *testing.T, result VerifyResult, path string) VerifyFile {
 	}
 	t.Fatalf("verify result did not include %s: %#v", path, result.Files)
 	return VerifyFile{}
+}
+
+func readCurrentEntityExportRow(t *testing.T, path, entityID string) model.CurrentEntity {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+		if len(bytes.TrimSpace(line)) == 0 {
+			continue
+		}
+		var row model.CurrentEntity
+		if err := json.Unmarshal(line, &row); err != nil {
+			t.Fatal(err)
+		}
+		if row.Entity.ID == entityID {
+			return row
+		}
+	}
+	t.Fatalf("current entity %s not found in %s", entityID, path)
+	return model.CurrentEntity{}
 }
 
 func TestWritePublicExportDrainsSourcesPastBoundedListCap(t *testing.T) {

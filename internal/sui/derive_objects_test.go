@@ -61,6 +61,39 @@ func TestDeriveEntityFromCharacterObjectUsesMetadataAndCanonicalID(t *testing.T)
 	}
 }
 
+func TestDeriveEntityFromObjectRejectsMismatchedTenant(t *testing.T) {
+	object := db.SuiObjectRecord{
+		ID:          "object:0xabc:7",
+		ObjectID:    "0xabc",
+		Environment: model.EnvironmentStillness,
+		TypeRepr:    testPackageID + "::character::Character",
+		PackageID:   testPackageID,
+		Module:      "character",
+		TypeName:    "Character",
+		Version:     "7",
+		Digest:      "digest",
+		SourceID:    "source:sui:sui-testnet:graphql:objects",
+		ObservedAt:  time.Now().UTC(),
+		Payload: map[string]any{
+			"json": map[string]any{
+				"key": map[string]any{
+					"tenant":  "liminality",
+					"item_id": "2112000001",
+				},
+				"metadata": map[string]any{
+					"name": "Cross Tenant Pilot",
+				},
+				"tribe_id":          "1000167",
+				"character_address": "0xwallet",
+			},
+		},
+	}
+
+	if _, ok := DeriveEntityFromObject(object); ok {
+		t.Fatal("mismatched tenant object was derived")
+	}
+}
+
 func TestDeriveEntityFromCharacterObjectUsesNestedMetadataName(t *testing.T) {
 	object := db.SuiObjectRecord{
 		ID:          "object:0xprofile:8",

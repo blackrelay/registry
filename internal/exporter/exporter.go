@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/blackrelay/registry/internal/db"
@@ -447,6 +449,9 @@ func writeEventExport(ctx context.Context, store Store, path string, options Exp
 			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
+			if !primaryPayloadTenantMatchesEnvironment(item.Payload, item.Environment) {
+				continue
+			}
 			if err := encoder.Encode(item); err != nil {
 				return closeCollectionExport(file, progress, err)
 			}
@@ -485,6 +490,9 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 			return closeCollectionExport(file, progress, err)
 		}
 		for _, item := range page.Items {
+			if !primaryPayloadTenantMatchesEnvironment(item.Payload, item.Environment) {
+				continue
+			}
 			if err := encoder.Encode(item); err != nil {
 				return closeCollectionExport(file, progress, err)
 			}
@@ -498,6 +506,93 @@ func writeSuiObjectExport(ctx context.Context, store Store, path string, options
 		cursor = page.NextCursor
 	}
 	return closeCollectionExport(file, progress, nil)
+}
+
+func primaryPayloadTenantMatchesEnvironment(payload map[string]any, environment model.Environment) bool {
+	if environment == "" || environment == model.EnvironmentUnknown {
+		return true
+	}
+	key := firstTenantKey(payload, []string{
+		"key",
+		"assembly_key",
+		"gate_key",
+		"network_node_key",
+		"storage_unit_key",
+		"turret_key",
+		"character_key",
+	})
+	tenant := strings.TrimSpace(stringValue(key["tenant"]))
+	return tenant == "" || tenant == string(environment)
+}
+
+func firstTenantKey(payload map[string]any, keys []string) map[string]any {
+	for _, key := range keys {
+		if value := mapValue(payload[key]); len(value) != 0 {
+			return value
+		}
+	}
+	jsonPayload := mapValue(payload["json"])
+	for _, key := range keys {
+		if value := mapValue(jsonPayload[key]); len(value) != 0 {
+			return value
+		}
+	}
+	return nil
+}
+
+func mapValue(value any) map[string]any {
+	record, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	return record
+}
+
+func stringValue(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return typed
+	case fmt.Stringer:
+		return typed.String()
+	default:
+		return ""
+	}
+}
+
+func scalarString(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(typed)
+	case fmt.Stringer:
+		return strings.TrimSpace(typed.String())
+	case float64:
+		if typed == float64(int64(typed)) {
+			return fmt.Sprintf("%.0f", typed)
+		}
+		return strings.TrimSpace(fmt.Sprint(typed))
+	case float32:
+		asFloat := float64(typed)
+		if asFloat == float64(int64(asFloat)) {
+			return fmt.Sprintf("%.0f", asFloat)
+		}
+		return strings.TrimSpace(fmt.Sprint(typed))
+	case int:
+		return fmt.Sprint(typed)
+	case int64:
+		return fmt.Sprint(typed)
+	case int32:
+		return fmt.Sprint(typed)
+	case uint:
+		return fmt.Sprint(typed)
+	case uint64:
+		return fmt.Sprint(typed)
+	case uint32:
+		return fmt.Sprint(typed)
+	default:
+		return strings.TrimSpace(fmt.Sprint(typed))
+	}
 }
 
 func writeEntityProvenanceExports(ctx context.Context, store Store, outputDir string, options ExportOptions) (collectionExport, collectionExport, collectionExport, error) {
@@ -639,6 +734,11 @@ func writeCurrentEntityExport(ctx context.Context, store Store, path string, opt
 		return collectionExport{}, err
 	}
 	encoder := json.NewEncoder(file)
+	currentCharacterIDs, err := collectCreatedCharacterIDs(ctx, store, options)
+	if err != nil {
+		return closeCollectionExport(file, collectionExport{}, err)
+	}
+	currentCharacterTribeIDs := make(map[string]string)
 	progress := newCollectionExport("type ASC, display_name ASC, entity_id ASC")
 	for _, entityType := range currentEntityExportTypes() {
 		cursor := ""
@@ -658,6 +758,12 @@ func writeCurrentEntityExport(ctx context.Context, store Store, path string, opt
 				return closeCollectionExport(file, progress, err)
 			}
 			for _, item := range page.Items {
+				if item.Entity.Type == model.EntityTypeCharacter {
+					recordCurrentCharacterTribe(&item, currentCharacterIDs, currentCharacterTribeIDs)
+				}
+				if item.Entity.Type == model.EntityTypeTribe {
+					filterCurrentTribeMemberRelations(&item, currentCharacterIDs, currentCharacterTribeIDs)
+				}
 				if err := encoder.Encode(item); err != nil {
 					return closeCollectionExport(file, progress, err)
 				}
@@ -674,6 +780,96 @@ func writeCurrentEntityExport(ctx context.Context, store Store, path string, opt
 	progress.NextCursor = ""
 	progress.Complete = true
 	return closeCollectionExport(file, progress, nil)
+}
+
+func collectCreatedCharacterIDs(ctx context.Context, store Store, options ExportOptions) (map[string]struct{}, error) {
+	out := make(map[string]struct{})
+	cursor := ""
+	for {
+		page, err := store.ListEvents(ctx, db.EventQuery{
+			Kind:            "character.created",
+			Cycles:          options.Cycles,
+			IncludeUncycled: options.IncludeUncycled,
+			Limit:           5000,
+			MaxLimit:        5000,
+			Cursor:          cursor,
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, event := range page.Items {
+			if id := createdCharacterEntityID(event); id != "" {
+				out[id] = struct{}{}
+			}
+		}
+		if page.NextCursor == "" || len(page.Items) == 0 {
+			break
+		}
+		cursor = page.NextCursor
+	}
+	return out, nil
+}
+
+func createdCharacterEntityID(event db.EventRecord) string {
+	payload := event.Payload
+	if value := mapValue(payload["json"]); len(value) != 0 {
+		payload = value
+	}
+	if !primaryPayloadTenantMatchesEnvironment(payload, event.Environment) {
+		return ""
+	}
+	itemID := scalarString(mapValue(payload["key"])["item_id"])
+	if itemID == "" {
+		itemID = scalarString(payload["item_id"])
+	}
+	if event.Environment == "" || itemID == "" {
+		return ""
+	}
+	return fmt.Sprintf("character:%s:%s", event.Environment, itemID)
+}
+
+func recordCurrentCharacterTribe(item *model.CurrentEntity, currentCharacterIDs map[string]struct{}, currentCharacterTribeIDs map[string]string) {
+	if item == nil || item.Entity.Type != model.EntityTypeCharacter || currentCharacterTribeIDs == nil {
+		return
+	}
+	if len(currentCharacterIDs) != 0 {
+		if _, ok := currentCharacterIDs[item.Entity.ID]; !ok {
+			return
+		}
+	}
+	if item.Derived == nil || item.Derived.Tribe == nil || item.Derived.Tribe.EntityID == "" {
+		return
+	}
+	currentCharacterTribeIDs[item.Entity.ID] = item.Derived.Tribe.EntityID
+}
+
+func filterCurrentTribeMemberRelations(item *model.CurrentEntity, currentCharacterIDs map[string]struct{}, currentCharacterTribeIDs map[string]string) {
+	if item == nil || item.Entity.Type != model.EntityTypeTribe || len(currentCharacterIDs) == 0 {
+		return
+	}
+	memberCount := 0
+	seenMemberIDs := make(map[string]struct{})
+	filtered := item.IncomingRelations[:0]
+	for _, relation := range item.IncomingRelations {
+		if relation.Predicate == "belongs_to" && relation.SubjectEntityType == model.EntityTypeCharacter {
+			if _, ok := currentCharacterIDs[relation.SubjectEntityID]; !ok {
+				continue
+			}
+			if currentTribeID, ok := currentCharacterTribeIDs[relation.SubjectEntityID]; !ok || currentTribeID != item.Entity.ID {
+				continue
+			}
+			if _, ok := seenMemberIDs[relation.SubjectEntityID]; ok {
+				continue
+			}
+			seenMemberIDs[relation.SubjectEntityID] = struct{}{}
+			memberCount++
+		}
+		filtered = append(filtered, relation)
+	}
+	item.IncomingRelations = filtered
+	if item.Derived != nil {
+		item.Derived.MemberCount = memberCount
+	}
 }
 
 func writeCurrentRelationExport(ctx context.Context, store Store, path string, options ExportOptions) (collectionExport, error) {

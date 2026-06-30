@@ -76,6 +76,9 @@ func DeriveEntitiesFromEvent(event db.EventRecord) DerivedEventGraph {
 	if payload == nil || event.SourceID == "" {
 		return DerivedEventGraph{}
 	}
+	if !primaryPayloadTenantMatchesEnvironment(payload, event.Environment) {
+		return DerivedEventGraph{}
+	}
 	builder := eventGraphBuilder{
 		event:       event,
 		entities:    make(map[string]DerivedEventEntity),
@@ -899,6 +902,25 @@ func tenantOrEnvironment(tenant string, environment model.Environment) string {
 		return string(environment)
 	}
 	return string(model.EnvironmentUnknown)
+}
+
+func primaryPayloadTenantMatchesEnvironment(payload map[string]any, environment model.Environment) bool {
+	if environment == "" || environment == model.EnvironmentUnknown {
+		return true
+	}
+	key, ok := firstTenantItem(payload, []string{
+		"key",
+		"assembly_key",
+		"gate_key",
+		"network_node_key",
+		"storage_unit_key",
+		"turret_key",
+		"character_key",
+	})
+	if !ok || key.Tenant == "" {
+		return true
+	}
+	return key.Tenant == string(environment)
 }
 
 func assemblyLikeShape(eventKind, module string) (model.EntityType, string, []string) {

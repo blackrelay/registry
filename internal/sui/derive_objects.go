@@ -63,6 +63,9 @@ func DeriveEntityFromObject(object db.SuiObjectRecord) (DerivedObjectEntity, boo
 	}
 	jsonValue := objectJSON(object)
 	tenant, itemID := objectIdentity(jsonValue)
+	if tenant != "" && tenant != string(object.Environment) {
+		return DerivedObjectEntity{}, false
+	}
 	if itemID == "" && object.Module == "character" && object.TypeName == "PlayerProfile" {
 		itemID = stringFrom(jsonValue["character_id"])
 	}
